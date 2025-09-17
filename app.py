@@ -1,6 +1,7 @@
-import pandas as pd
 import streamlit as st
-from pathlib import Path
+import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="DZMatch Votes", layout="wide")
 st.title("🏆 DZMatch Votes")
@@ -9,16 +10,37 @@ st.title("🏆 DZMatch Votes")
 # 🔹 Définir les catégories et participants
 # -------------------------------
 categories = {
-    "Meilleur gardien": ["Oussama", "Zakaria", "Abderrahmane", "Tarek"],
-    "Meilleur club": ["MCA", "USMA", "CSC", "CRB"],
-    "Meilleur joueur": ["Adel", "Aymen", "Ibrahim", "Salim"],
-    "Meilleur entraîneur": ["Khaled", "Joseph", "Sead", "Bilal"]
+    "Meilleur gardien": [
+        "Oussama Benbout (USMA)", "Zakaria Bouhalfaya (CSC)", "Abderrahmane Medjadel (ASO)",
+        "Tarek Boussder (ESS)", "Abdelkader Salhi (MCEB)", "Zeghba (CRB)", "Hadid (JSK)", "Ramdane (MCA)"
+    ],
+    "Meilleur club": ["MCA", "USMA", "CSC", "CRB", "JSK", "PAC", "ESS"],
+    "Meilleur joueur": [
+        "Adel Boulbina (PAC)", "Aymen Mahious (CRB)", "Abderrahmane Meziane (CRB)",
+        "Ibrahim Dib (CSC)", "Salim Boukhenchouch (USMA)", "Larbi Tabti (MCA)", "Mehdi Boudjamaa (JSK)"
+    ],
+    "Meilleur entraîneur": [
+        "Khaled Benyahia (MCA)", "Joseph Zinbauer (JSK)", "Sead Ramovic (CRB)",
+        "Khereddine Madoui (CSC)", "Bilal Dziri (PAC)"
+    ]
 }
 
 # -------------------------------
 # 🔹 Barème des points
 # -------------------------------
-points = {1:5, 2:3, 3:2, 4:1, 5:0.5}
+points = {1:5, 2:4, 3:3, 4:2, 5:1}
+
+# -------------------------------
+# 🔹 Connexion à Google Sheets
+# -------------------------------
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
+client = gspread.authorize(creds)
+
+# Nom du fichier Google Sheet
+sheet = client.open("VoteDZMatch").sheet1
 
 # -------------------------------
 # 🔹 Nom du votant
@@ -43,30 +65,20 @@ with st.form("vote_form"):
     submitted = st.form_submit_button("✅ Envoyer mon vote")
 
 # -------------------------------
-# 🔹 Fichier Excel
-# -------------------------------
-excel_file = Path("votes.xlsx")
-
-# -------------------------------
-# 🔹 Fonction pour sauvegarder le vote
+# 🔹 Sauvegarde du vote
 # -------------------------------
 def save_vote(nom, votes):
-    if excel_file.exists():
-        df = pd.read_excel(excel_file)
-    else:
-        df = pd.DataFrame(columns=["Nom","Categorie","Candidat","Position","Points"])
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
 
-    # Vérifier si le votant a déjà voté
-    if nom in df["Nom"].values:
+    # Si le votant a déjà voté
+    if not df.empty and nom in df["Nom"].values:
         return False
 
     # Ajouter les votes
     for cat, top5 in votes.items():
         for i, candidat in enumerate(top5, start=1):
-            df = pd.concat([df, pd.DataFrame([[nom, cat, candidat, i, points.get(i,0)]],
-                        columns=df.columns)], ignore_index=True)
-
-    df.to_excel(excel_file, index=False)
+            sheet.append_row([nom, cat, candidat, i, points.get(i,0)])
     return True
 
 # -------------------------------
@@ -86,8 +98,9 @@ if submitted:
 # 🔹 Affichage des résultats
 # -------------------------------
 st.header("📊 Classements en temps réel")
-if excel_file.exists():
-    df = pd.read_excel(excel_file)
+data = sheet.get_all_records()
+if data:
+    df = pd.DataFrame(data)
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
     for cat in categories:
@@ -96,3 +109,5 @@ if excel_file.exists():
         df_cat = df_cat.sort_values(by="Points", ascending=False)
         df_cat.insert(0,"Position", range(1, len(df_cat)+1))
         st.dataframe(df_cat, use_container_width=True)
+else:
+    st.info("Aucun vote pour le moment.")
