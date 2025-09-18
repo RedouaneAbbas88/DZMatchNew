@@ -14,7 +14,7 @@ st.title("🏆 DZMatch Votes")
 # ---------------------------------------------------
 categories = {
     "Meilleur gardien": [
-        "Oussama Benbout (USMA)", "Zakaria Bouhalfaya (CSC)",
+        "abbas Benbout (USMA)", "Zakaria Bouhalfaya (CSC)",
         "Abderrahmane Medjadel (ASO)", "Tarek Boussder (ESS)",
         "Abdelkader Salhi (MCEB)", "Zeghba (CRB)",
         "Hadid (JSK)", "Ramdane (MCA)"
