@@ -40,14 +40,21 @@ points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 # ---------------------------------------------------
 # 🔹 Connexion Google Sheets
 # ---------------------------------------------------
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-creds_dict = st.secrets["google"]  # ton JSON dans .streamlit/secrets.toml
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+creds_dict = st.secrets["google"]  # JSON du compte de service dans .streamlit/secrets.toml
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-# Nom exact du fichier et de l’onglet
-spreadsheet = client.open("votes")
-sheet = spreadsheet.worksheet("FEUILLE 1")
+# 🔑 Ouvrir le fichier par ID
+SPREADSHEET_ID = "10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc"
+spreadsheet = client.open_by_key(SPREADSHEET_ID)
+
+# 📝 Onglet exact
+sheet = spreadsheet.worksheet("Feuille 1")
 
 # ---------------------------------------------------
 # 🔹 Nom du votant
@@ -79,7 +86,7 @@ def save_vote(nom, votes):
     df = pd.DataFrame(data)
 
     # Vérifier si le votant a déjà voté
-    if not df.empty and nom in df["Nom"].values:
+    if not df.empty and "Nom" in df.columns and nom in df["Nom"].values:
         return False
 
     # Ajouter les votes
@@ -115,11 +122,12 @@ st.header("📊 Classements en temps réel")
 data = sheet.get_all_records()
 if data:
     df = pd.DataFrame(data)
-    df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
+    if "Points" in df.columns:
+        df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
-    for cat in categories:
-        st.subheader(cat)
-        df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
-        df_cat = df_cat.sort_values(by="Points", ascending=False)
-        df_cat.insert(0, "Position", range(1, len(df_cat) + 1))
-        st.dataframe(df_cat, use_container_width=True)
+        for cat in categories:
+            st.subheader(cat)
+            df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
+            df_cat = df_cat.sort_values(by="Points", ascending=False)
+            df_cat.insert(0, "Position", range(1, len(df_cat) + 1))
+            st.dataframe(df_cat, use_container_width=True)
