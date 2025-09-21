@@ -4,10 +4,20 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------
-# ⚙️ Configuration Streamlit
+# ⚙️ Configuration Streamlit avec logo
 # ---------------------------------------------------
-st.set_page_config(page_title="DZMatch Votes", layout="wide")
-st.title("🏆 DZMatch Votes")
+st.set_page_config(
+    page_title="DZMatch Votes",
+    page_icon="https://drive.google.com/file/d/19i_KcrqzX2NNfBIBNKB6SOTgSMgBgsUH/view",  # Remplacer par l'URL de ton logo
+    layout="wide"
+)
+
+# Affichage du logo et du titre côte à côte
+col1, col2 = st.columns([1, 5])
+with col1:
+    st.image("https://ton-site.com/chemin/vers/logo.png", width=80)  # Remplacer par l'URL de ton logo
+with col2:
+    st.title("DZMatch Votes")
 
 # ---------------------------------------------------
 # 🔹 Définir les catégories et participants
@@ -54,7 +64,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-creds_dict = st.secrets["google"]  # JSON du compte de service
+creds_dict = st.secrets["google"]
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 client = gspread.authorize(creds)
 SPREADSHEET_ID = "10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc"
@@ -93,7 +103,7 @@ def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
-    # Vérifier si le votant a déjà voté ou même numéro de téléphone
+    # Vérifier si le votant a déjà voté ou numéro de téléphone déjà utilisé
     if not df.empty:
         if "Nom" in df.columns and nom in df["Nom"].values:
             return False
@@ -106,7 +116,6 @@ def save_vote(nom, tel, media, votes):
         for i, candidat in enumerate(top_selected, start=1):
             new_rows.append([nom, tel, media, cat, candidat, i, points.get(i, 0)])
 
-    # Envoi vers Google Sheets
     for row in new_rows:
         sheet.append_row(row)
 
