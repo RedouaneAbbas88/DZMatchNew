@@ -8,14 +8,14 @@ from google.oauth2.service_account import Credentials
 # ---------------------------------------------------
 st.set_page_config(
     page_title="DZBEST 2025",
-    page_icon="Assets/logo2.PNG",  # Remplacer par l'URL de ton logo
+    page_icon="Assets/logo.PNG",  # Remplacer par l'URL de ton logo
     layout="wide"
 )
 
 # Affichage du logo et du titre côte à côte
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.image("Assets/logo2.PNG", width=150)  # Remplacer par l'URL de ton logo
+    st.image("Assets/logo.PNG", width=180)  # Remplacer par l'URL de ton logo
 with col2:
     st.title("DZBEST 2025")
 
