@@ -15,7 +15,7 @@ st.set_page_config(
 # Affichage du logo et du titre côte à côte
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.image("https://ton-site.com/chemin/vers/logo.png", width=80)  # Remplacer par l'URL de ton logo
+    st.image("https://drive.google.com/uc?export=view&id=19i_KcrqzX2NNfBIBNKB6SOTgSMgBgsUH", width=80)  # Remplacer par l'URL de ton logo
 with col2:
     st.title("DZMatch Votes")
 
