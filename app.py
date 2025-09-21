@@ -8,7 +8,7 @@ from google.oauth2.service_account import Credentials
 # ---------------------------------------------------
 st.set_page_config(
     page_title="DZMatch Votes",
-    page_icon="https://drive.google.com/file/d/uc?export=view&id=19i_KcrqzX2NNfBIBNKB6SOTgSMgBgsUH",  # Remplacer par l'URL de ton logo
+    page_icon="https://drive.google.com/uc?export=view&id=19i_KcrqzX2NNfBIBNKB6SOTgSMgBgsUH",  # Remplacer par l'URL de ton logo
     layout="wide"
 )
 
