@@ -67,9 +67,11 @@ spreadsheet = client.open_by_key(SPREADSHEET_ID)
 sheet = spreadsheet.worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# 🔹 Nom du votant
+# 🔹 Infos du votant
 # ---------------------------------------------------
 nom_votant = st.text_input("📝 Entrez votre nom et prénom :")
+num_tel = st.text_input("📞 Entrez votre numéro de téléphone :")
+media_link = st.text_input("📸 Lien vers un média (optionnel) :")
 
 # ---------------------------------------------------
 # 🔹 Formulaire de vote
@@ -94,7 +96,7 @@ with st.form("vote_form"):
 # ---------------------------------------------------
 # 🔹 Fonction pour sauvegarder le vote
 # ---------------------------------------------------
-def save_vote(nom, votes):
+def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
@@ -106,7 +108,7 @@ def save_vote(nom, votes):
     new_rows = []
     for cat, top_selected in votes.items():
         for i, candidat in enumerate(top_selected, start=1):
-            new_rows.append([nom, cat, candidat, i, points.get(i, 0)])
+            new_rows.append([nom, tel, media, cat, candidat, i, points.get(i, 0)])
 
     # Envoi vers Google Sheets
     for row in new_rows:
@@ -120,8 +122,10 @@ def save_vote(nom, votes):
 if submitted:
     if not nom_votant.strip():
         st.error("⚠️ Vous devez entrer votre nom et prénom avant de voter.")
+    elif not num_tel.strip():
+        st.error("⚠️ Vous devez entrer votre numéro de téléphone.")
     else:
-        success = save_vote(nom_votant, vote_data)
+        success = save_vote(nom_votant, num_tel, media_link, vote_data)
         if success:
             st.success(f"Merci {nom_votant}, votre vote a été enregistré ! 🎉")
         else:
