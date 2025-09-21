@@ -15,7 +15,7 @@ st.set_page_config(
 # Affichage du logo et du titre côte à côte
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.image("Assets/logo.PNG", width=180)  # Remplacer par l'URL de ton logo
+    st.image("Assets/logo.PNG", width=150)  # Remplacer par l'URL de ton logo
 with col2:
     st.title("DZBEST 2025")
 
