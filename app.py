@@ -54,24 +54,19 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-
-creds_dict = st.secrets["google"]  # JSON du compte de service dans .streamlit/secrets.toml
+creds_dict = st.secrets["google"]  # JSON du compte de service
 creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 client = gspread.authorize(creds)
-
-# 🔑 Ouvrir le fichier par ID
 SPREADSHEET_ID = "10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc"
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
-
-# 📝 Onglet exact
 sheet = spreadsheet.worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# 🔹 Infos du votant
+# 🔹 Infos du votant (obligatoires)
 # ---------------------------------------------------
 nom_votant = st.text_input("📝 Entrez votre nom et prénom :")
 num_tel = st.text_input("📞 Entrez votre numéro de téléphone :")
-media_link = st.text_input("📸 Lien vers un média (optionnel) :")
+media_link = st.text_input("📸 Entrez le nom de votre média :")
 
 # ---------------------------------------------------
 # 🔹 Formulaire de vote
@@ -80,9 +75,7 @@ vote_data = {}
 with st.form("vote_form"):
     for cat, participants in categories.items():
         st.subheader(cat)
-
-        max_top = max_choices.get(cat, 5)  # valeur par défaut = 5
-
+        max_top = max_choices.get(cat, 5)
         top_selected = st.multiselect(
             f"Sélectionnez votre TOP {max_top} pour {cat} (ordre important)",
             options=participants,
@@ -100,9 +93,12 @@ def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
-    # Vérifier si le votant a déjà voté
-    if not df.empty and "Nom" in df.columns and nom in df["Nom"].values:
-        return False
+    # Vérifier si le votant a déjà voté ou même numéro de téléphone
+    if not df.empty:
+        if "Nom" in df.columns and nom in df["Nom"].values:
+            return False
+        if "Téléphone" in df.columns and tel in df["Téléphone"].values:
+            return False
 
     # Ajouter les votes
     new_rows = []
@@ -121,27 +117,27 @@ def save_vote(nom, tel, media, votes):
 # ---------------------------------------------------
 if submitted:
     if not nom_votant.strip():
-        st.error("⚠️ Vous devez entrer votre nom et prénom avant de voter.")
+        st.error("⚠️ Vous devez entrer votre nom et prénom.")
     elif not num_tel.strip():
         st.error("⚠️ Vous devez entrer votre numéro de téléphone.")
+    elif not media_link.strip():
+        st.error("⚠️ Vous devez entrer le nom de votre média.")
     else:
         success = save_vote(nom_votant, num_tel, media_link, vote_data)
         if success:
             st.success(f"Merci {nom_votant}, votre vote a été enregistré ! 🎉")
         else:
-            st.error("⚠️ Vous avez déjà voté.")
+            st.error("⚠️ Vous avez déjà voté ou ce numéro de téléphone a déjà été utilisé.")
 
 # ---------------------------------------------------
 # 🔹 Affichage des résultats
 # ---------------------------------------------------
 st.header("📊 Classements en temps réel")
-
 data = sheet.get_all_records()
 if data:
     df = pd.DataFrame(data)
     if "Points" in df.columns:
         df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
-
         for cat in categories:
             st.subheader(cat)
             df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
