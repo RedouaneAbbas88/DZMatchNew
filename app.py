@@ -152,4 +152,8 @@ if data:
             df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
             df_cat = df_cat.sort_values(by="Points", ascending=False)
             df_cat.insert(0, "Position", range(1, len(df_cat) + 1))
+
+            # Ne garder que les colonnes souhaitées
+            df_cat = df_cat[["Position", "Candidat", "Points"]]
+
             st.dataframe(df_cat, use_container_width=True)
