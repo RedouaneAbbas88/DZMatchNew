@@ -7,17 +7,17 @@ from google.oauth2.service_account import Credentials
 # ⚙️ Configuration Streamlit avec logo
 # ---------------------------------------------------
 st.set_page_config(
-    page_title="DZMatch Votes",
-    page_icon="logo.png",  # Remplacer par l'URL de ton logo
+    page_title="DZBEST 2025",
+    page_icon="Assets/logo.png",  # Remplacer par l'URL de ton logo
     layout="wide"
 )
 
 # Affichage du logo et du titre côte à côte
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.image("logo.png", width=80)  # Remplacer par l'URL de ton logo
+    st.image("Assets/logo.png", width=150)  # Remplacer par l'URL de ton logo
 with col2:
-    st.title("DZMatch Votes")
+    st.title("DZBEST 2025")
 
 # ---------------------------------------------------
 # 🔹 Définir les catégories et participants
