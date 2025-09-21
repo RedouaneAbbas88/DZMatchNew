@@ -14,10 +14,10 @@ st.title("🏆 DZMatch Votes")
 # ---------------------------------------------------
 categories = {
     "Meilleur gardien": [
-        "abbas Benbout (USMA)", "Zakaria Bouhalfaya (CSC)",
+        "Oussama Benbout (USMA)", "Zakaria Bouhalfaya (CSC)",
         "Abderrahmane Medjadel (ASO)", "Tarek Boussder (ESS)",
-        "Abdelkader Salhi (MCEB)", "Zeghba (CRB)",
-        "Hadid (JSK)", "Ramdane (MCA)"
+        "Abdelkader Salhi (MCEB)", "Moustapha Zeghba (CRB)",
+        "Hadid mohamed (JSK)", "Ramdane Abdelatif (MCA)"
     ],
     "Meilleur club": ["MCA", "USMA", "CSC", "CRB", "JSK", "PAC", "ESS"],
     "Meilleur joueur": [
@@ -33,9 +33,19 @@ categories = {
 }
 
 # ---------------------------------------------------
-# 🔹 Barème des points
+# 🔹 Nombre max de choix par catégorie
 # ---------------------------------------------------
-points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
+max_choices = {
+    "Meilleur gardien": 8,
+    "Meilleur club": 7,
+    "Meilleur joueur": 7,
+    "Meilleur entraîneur": 5
+}
+
+# ---------------------------------------------------
+# 🔹 Barème des points (jusqu’à TOP 8)
+# ---------------------------------------------------
+points = {1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1}
 
 # ---------------------------------------------------
 # 🔹 Connexion Google Sheets
@@ -68,13 +78,16 @@ vote_data = {}
 with st.form("vote_form"):
     for cat, participants in categories.items():
         st.subheader(cat)
-        top5 = st.multiselect(
-            f"Sélectionnez votre TOP 5 pour {cat} (ordre important)",
+
+        max_top = max_choices.get(cat, 5)  # valeur par défaut = 5
+
+        top_selected = st.multiselect(
+            f"Sélectionnez votre TOP {max_top} pour {cat} (ordre important)",
             options=participants,
-            max_selections=5,
+            max_selections=max_top,
             key=cat
         )
-        vote_data[cat] = top5
+        vote_data[cat] = top_selected
 
     submitted = st.form_submit_button("✅ Envoyer mon vote")
 
@@ -91,8 +104,8 @@ def save_vote(nom, votes):
 
     # Ajouter les votes
     new_rows = []
-    for cat, top5 in votes.items():
-        for i, candidat in enumerate(top5, start=1):
+    for cat, top_selected in votes.items():
+        for i, candidat in enumerate(top_selected, start=1):
             new_rows.append([nom, cat, candidat, i, points.get(i, 0)])
 
     # Envoi vers Google Sheets
