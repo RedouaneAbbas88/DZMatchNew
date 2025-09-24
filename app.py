@@ -143,13 +143,17 @@ if submitted:
 # ---------------------------------------------------
 st.header("📊 Classements en temps réel")
 data = sheet.get_all_records()
+
 if data:
     df = pd.DataFrame(data)
+
     if "Points" in df.columns:
         df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
+
         for cat in categories:
             st.subheader(cat)
 
+            # Filtrer et regrouper par candidat
             df_cat = (
                 df[df["Categorie"] == cat]
                 .groupby("Candidat")["Points"]
@@ -157,13 +161,14 @@ if data:
                 .reset_index()
             )
 
-            # Trier et réinitialiser proprement l'index
+            # Trier et réinitialiser l’index
             df_cat = df_cat.sort_values(by="Points", ascending=False).reset_index(drop=True)
 
             # Ajouter la colonne Classement
             df_cat.insert(0, "Classement", range(1, len(df_cat) + 1))
 
-            # Ne garder que les colonnes voulues
+            # Garder uniquement les colonnes souhaitées
             df_cat = df_cat[["Classement", "Candidat", "Points"]]
 
-            st.dataframe(df_cat, use_container_width=True)
+            # Afficher sans la colonne d’index
+            st.dataframe(df_cat, use_container_width=True, hide_index=True)
