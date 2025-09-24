@@ -149,11 +149,21 @@ if data:
         df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
         for cat in categories:
             st.subheader(cat)
-            df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
-            df_cat = df_cat.sort_values(by="Points", ascending=False)
-            df_cat.insert(0, "Position", range(1, len(df_cat) + 1))
 
-            # Ne garder que les colonnes souhaitées
-            df_cat = df_cat[["Position", "Candidat", "Points"]]
+            df_cat = (
+                df[df["Categorie"] == cat]
+                .groupby("Candidat")["Points"]
+                .sum()
+                .reset_index()
+            )
+
+            # Trier et réinitialiser proprement l'index
+            df_cat = df_cat.sort_values(by="Points", ascending=False).reset_index(drop=True)
+
+            # Ajouter la colonne Classement
+            df_cat.insert(0, "Classement", range(1, len(df_cat) + 1))
+
+            # Ne garder que les colonnes voulues
+            df_cat = df_cat[["Classement", "Candidat", "Points"]]
 
             st.dataframe(df_cat, use_container_width=True)
