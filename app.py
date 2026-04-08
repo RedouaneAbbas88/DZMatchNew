@@ -4,76 +4,71 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------
-# ⚙️ Configuration Streamlit
+# ⚙️ Config
 # ---------------------------------------------------
-st.set_page_config(
-    page_title="DZBEST 2025",
-    page_icon="Assets/logo.PNG",
-    layout="wide"
-)
+st.set_page_config(page_title="DZBEST 2025", layout="wide")
 
-# Header
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.image("Assets/logo.PNG", width=120)
-with col2:
-    st.title("🏆 DZBEST 2025")
+st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# 🔹 Données avec images
+# 🔹 Données avec icônes
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {
-            "name": "Adel Boulbina (PAC)",
-            "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-        },
-        {
-            "name": "Aymen Mahious (CRB)",
-            "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-        }
+        "⚽ Adel Boulbina (PAC)",
+        "⚽ Aymen Mahious (CRB)",
+        "⚽ Abderrahmane Meziane (CRB)",
+        "⚽ Ibrahim Dib (CSC)",
+        "⚽ Salim Boukhenchouch (USMA)"
     ],
-
+    "Meilleur gardien": [
+        "🧤 Oussama Benbout (USMA)",
+        "🧤 Zakaria Bouhalfaya (CSC)",
+        "🧤 Moustapha Zeghba (CRB)"
+    ],
     "Meilleur entraîneur": [
-        {
-            "name": "Khaled Benyahia (MCA)",
-            "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-        },
-        {
-            "name": "Joseph Zinbauer (JSK)",
-            "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"
-        }
+        "🎯 Khaled Benyahia (MCA)",
+        "🎯 Joseph Zinbauer (JSK)",
+        "🎯 Khereddine Madoui (CSC)"
+    ],
+    "Meilleur club": [
+        "🏟️ MCA",
+        "🏟️ USMA",
+        "🏟️ CRB",
+        "🏟️ JSK"
     ]
 }
 
 max_choices = {
-    "Meilleur joueur": 2,
-    "Meilleur entraîneur": 2
+    "Meilleur joueur": 5,
+    "Meilleur gardien": 3,
+    "Meilleur entraîneur": 3,
+    "Meilleur club": 3
 }
 
-points = {1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1}
+points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
-# 🔹 Connexion Google Sheets
+# 🔹 Google Sheets
 # ---------------------------------------------------
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds_dict = st.secrets["google"]
-creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+creds = Credentials.from_service_account_info(
+    st.secrets["google"], scopes=SCOPES
+)
 client = gspread.authorize(creds)
 
-SPREADSHEET_ID = "10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc"
-sheet = client.open_by_key(SPREADSHEET_ID).worksheet("Feuille 1")
+sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
 # 🔹 Infos votant
 # ---------------------------------------------------
-nom_votant = st.text_input("📝 Nom et prénom")
-num_tel = st.text_input("📞 Téléphone")
-media = st.text_input("📸 Média")
+nom = st.text_input("Nom et prénom")
+tel = st.text_input("Téléphone")
+media = st.text_input("Média")
 
 # ---------------------------------------------------
 # 🔹 FORMULAIRE
@@ -85,30 +80,39 @@ with st.form("vote_form"):
     for cat, participants in categories.items():
         st.subheader(f"🏅 {cat}")
 
-        selected = []
-        cols = st.columns(4)
+        selections = []
+        used = []
 
-        for i, p in enumerate(participants):
-            with cols[i % 4]:
-                st.image(p["img"], use_container_width=True)
-                if st.checkbox(p["name"], key=f"{cat}_{i}"):
-                    selected.append(p["name"])
+        for i in range(1, max_choices[cat] + 1):
 
-        vote_data[cat] = selected[:max_choices[cat]]
+            # filtrer pour éviter doublons
+            options = [p for p in participants if p not in used]
+
+            choice = st.selectbox(
+                f"Choix #{i}",
+                ["-- Choisir --"] + options,
+                key=f"{cat}_{i}"
+            )
+
+            if choice != "-- Choisir --":
+                selections.append(choice)
+                used.append(choice)
+
+        vote_data[cat] = selections
 
     submitted = st.form_submit_button("✅ Voter")
 
 # ---------------------------------------------------
-# 🔹 SAUVEGARDE
+# 🔹 SAVE
 # ---------------------------------------------------
 def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
     if not df.empty:
-        if "Nom" in df.columns and nom in df["Nom"].values:
+        if nom in df.get("Nom", [] ).values:
             return False
-        if "Téléphone" in df.columns and tel in df["Téléphone"].values:
+        if tel in df.get("Téléphone", []).values:
             return False
 
     rows = []
@@ -125,10 +129,10 @@ def save_vote(nom, tel, media, votes):
 # 🔹 TRAITEMENT
 # ---------------------------------------------------
 if submitted:
-    if not nom_votant or not num_tel or not media:
+    if not nom or not tel or not media:
         st.error("⚠️ Remplir tous les champs")
     else:
-        ok = save_vote(nom_votant, num_tel, media, vote_data)
+        ok = save_vote(nom, tel, media, vote_data)
         if ok:
             st.success("✅ Vote enregistré !")
         else:
