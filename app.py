@@ -83,7 +83,7 @@ tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
-# 🔹 FORMULAIRE DE VOTE
+# 🔹 FORMULAIRE DE VOTE (ANTI-DOUBLON CORRIGÉ)
 # ---------------------------------------------------
 vote_data = {}
 
@@ -96,15 +96,22 @@ with st.form("vote_form"):
 
         for i in range(1, max_choices[cat] + 1):
 
-            # retirer les joueurs déjà choisis
+            key = f"{cat}_{i}"
+
+            # valeur actuelle
+            current_value = st.session_state.get(key, "-- Choisir --")
+
+            # filtrer options correctement
             available_options = [
-                p for p in participants if p not in selections
+                p for p in participants if p not in selections or p == current_value
             ]
+
+            options = ["-- Choisir --"] + available_options
 
             choice = st.selectbox(
                 f"Choix #{i}",
-                ["-- Choisir --"] + available_options,
-                key=f"{cat}_{i}"
+                options,
+                key=key
             )
 
             if choice != "-- Choisir --":
@@ -115,7 +122,7 @@ with st.form("vote_form"):
     submitted = st.form_submit_button("✅ Envoyer mon vote")
 
 # ---------------------------------------------------
-# 🔹 FONCTION SAVE
+# 🔹 SAVE
 # ---------------------------------------------------
 def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
