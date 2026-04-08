@@ -10,41 +10,41 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# DONNÉES
+# DONNÉES AVEC PHOTOS
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        "⚽ Adel Boulbina (PAC)",
-        "⚽ Aymen Mahious (CRB)",
-        "⚽ Abderrahmane Meziane (CRB)",
-        "⚽ Ibrahim Dib (CSC)",
-        "⚽ Salim Boukhenchouch (USMA)",
-        "⚽ Larbi Tabti (MCA)",
-        "⚽ Mehdi Boudjamaa (JSK)"
+        {"name": "Adel Boulbina (PAC)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Adel_Boulbina.jpg"},
+        {"name": "Aymen Mahious (CRB)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Abderrahmane Meziane (CRB)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Ibrahim Dib (CSC)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Salim Boukhenchouch (USMA)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Larbi Tabti (MCA)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Mehdi Boudjamaa (JSK)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
     ],
     "Meilleur gardien": [
-        "🧤 Oussama Benbout (USMA)",
-        "🧤 Zakaria Bouhalfaya (CSC)",
-        "🧤 Abderrahmane Medjadel (ASO)",
-        "🧤 Tarek Boussder (ESS)",
-        "🧤 Abdelkader Salhi (MCEB)",
-        "🧤 Moustapha Zeghba (CRB)"
+        {"name": "Oussama Benbout (USMA)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Zakaria Bouhalfaya (CSC)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Abderrahmane Medjadel (ASO)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Tarek Boussder (ESS)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Abdelkader Salhi (MCEB)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Moustapha Zeghba (CRB)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
     ],
     "Meilleur entraîneur": [
-        "🎯 Khaled Benyahia (MCA)",
-        "🎯 Joseph Zinbauer (JSK)",
-        "🎯 Sead Ramovic (CRB)",
-        "🎯 Khereddine Madoui (CSC)",
-        "🎯 Bilal Dziri (PAC)"
+        {"name": "Khaled Benyahia (MCA)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Joseph Zinbauer (JSK)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Sead Ramovic (CRB)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Khereddine Madoui (CSC)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"},
+        {"name": "Bilal Dziri (PAC)", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png"}
     ],
     "Meilleur club": [
-        "🏟️ MCA",
-        "🏟️ USMA",
-        "🏟️ CSC",
-        "🏟️ CRB",
-        "🏟️ JSK",
-        "🏟️ PAC",
-        "🏟️ ESS"
+        {"name": "MCA", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Club_Placeholder.png"},
+        {"name": "USMA", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Club_Placeholder.png"},
+        {"name": "CSC", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Club_Placeholder.png"},
+        {"name": "CRB", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Club_Placeholder.png"},
+        {"name": "JSK", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Club_Placeholder.png"},
+        {"name": "PAC", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Club_Placeholder.png"},
+        {"name": "ESS", "img": "https://upload.wikimedia.org/wikipedia/commons/8/89/Club_Placeholder.png"}
     ]
 }
 
@@ -73,7 +73,7 @@ tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
-# VOTE (SANS FORM → dynamique)
+# VOTE DYNAMIQUE AVEC PHOTOS
 # ---------------------------------------------------
 vote_data = {}
 
@@ -84,9 +84,7 @@ for cat, participants in categories.items():
 
     for i in range(1, max_choices[cat] + 1):
 
-        available_options = [
-            p for p in participants if p not in selections
-        ]
+        available_options = [p["name"] for p in participants if p["name"] not in selections]
 
         choice = st.selectbox(
             f"{cat} - Choix #{i}",
@@ -96,6 +94,11 @@ for cat, participants in categories.items():
 
         if choice != "-- Choisir --":
             selections.append(choice)
+
+            # afficher image
+            for p in participants:
+                if p["name"] == choice:
+                    st.image(p["img"], width=60)
 
     vote_data[cat] = selections
 
@@ -122,9 +125,7 @@ def save_vote(nom, tel, media, votes):
 
     return True
 
-# ---------------------------------------------------
-# BOUTON
-# ---------------------------------------------------
+# BOUTON ENVOI
 if st.button("✅ Envoyer mon vote"):
 
     if not nom.strip():
