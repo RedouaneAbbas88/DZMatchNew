@@ -4,14 +4,13 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------
-# ⚙️ Config
+# ⚙️ CONFIG
 # ---------------------------------------------------
 st.set_page_config(page_title="DZBEST 2025", layout="wide")
-
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# 🔹 Données avec icônes
+# 🔹 DONNÉES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
@@ -19,37 +18,47 @@ categories = {
         "⚽ Aymen Mahious (CRB)",
         "⚽ Abderrahmane Meziane (CRB)",
         "⚽ Ibrahim Dib (CSC)",
-        "⚽ Salim Boukhenchouch (USMA)"
+        "⚽ Salim Boukhenchouch (USMA)",
+        "⚽ Larbi Tabti (MCA)",
+        "⚽ Mehdi Boudjamaa (JSK)"
     ],
     "Meilleur gardien": [
         "🧤 Oussama Benbout (USMA)",
         "🧤 Zakaria Bouhalfaya (CSC)",
+        "🧤 Abderrahmane Medjadel (ASO)",
+        "🧤 Tarek Boussder (ESS)",
+        "🧤 Abdelkader Salhi (MCEB)",
         "🧤 Moustapha Zeghba (CRB)"
     ],
     "Meilleur entraîneur": [
         "🎯 Khaled Benyahia (MCA)",
         "🎯 Joseph Zinbauer (JSK)",
-        "🎯 Khereddine Madoui (CSC)"
+        "🎯 Sead Ramovic (CRB)",
+        "🎯 Khereddine Madoui (CSC)",
+        "🎯 Bilal Dziri (PAC)"
     ],
     "Meilleur club": [
         "🏟️ MCA",
         "🏟️ USMA",
+        "🏟️ CSC",
         "🏟️ CRB",
-        "🏟️ JSK"
+        "🏟️ JSK",
+        "🏟️ PAC",
+        "🏟️ ESS"
     ]
 }
 
 max_choices = {
     "Meilleur joueur": 5,
-    "Meilleur gardien": 3,
-    "Meilleur entraîneur": 3,
-    "Meilleur club": 3
+    "Meilleur gardien": 5,
+    "Meilleur entraîneur": 5,
+    "Meilleur club": 5
 }
 
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
-# 🔹 Google Sheets
+# 🔹 GOOGLE SHEETS
 # ---------------------------------------------------
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -59,19 +68,22 @@ SCOPES = [
 creds = Credentials.from_service_account_info(
     st.secrets["google"], scopes=SCOPES
 )
+
 client = gspread.authorize(creds)
 
-sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
+sheet = client.open_by_key(
+    "10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc"
+).worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# 🔹 Infos votant
+# 🔹 INFOS VOTANT
 # ---------------------------------------------------
-nom = st.text_input("Nom et prénom")
-tel = st.text_input("Téléphone")
-media = st.text_input("Média")
+nom = st.text_input("📝 Nom et prénom")
+tel = st.text_input("📞 Téléphone")
+media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
-# 🔹 FORMULAIRE
+# 🔹 FORMULAIRE DE VOTE
 # ---------------------------------------------------
 vote_data = {}
 
@@ -81,38 +93,38 @@ with st.form("vote_form"):
         st.subheader(f"🏅 {cat}")
 
         selections = []
-        used = []
 
         for i in range(1, max_choices[cat] + 1):
 
-            # filtrer pour éviter doublons
-            options = [p for p in participants if p not in used]
+            # retirer les joueurs déjà choisis
+            available_options = [
+                p for p in participants if p not in selections
+            ]
 
             choice = st.selectbox(
                 f"Choix #{i}",
-                ["-- Choisir --"] + options,
+                ["-- Choisir --"] + available_options,
                 key=f"{cat}_{i}"
             )
 
             if choice != "-- Choisir --":
                 selections.append(choice)
-                used.append(choice)
 
         vote_data[cat] = selections
 
-    submitted = st.form_submit_button("✅ Voter")
+    submitted = st.form_submit_button("✅ Envoyer mon vote")
 
 # ---------------------------------------------------
-# 🔹 SAVE
+# 🔹 FONCTION SAVE
 # ---------------------------------------------------
 def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
     if not df.empty:
-        if nom in df.get("Nom", [] ).values:
+        if "Nom" in df.columns and nom in df["Nom"].values:
             return False
-        if tel in df.get("Téléphone", []).values:
+        if "Téléphone" in df.columns and tel in df["Téléphone"].values:
             return False
 
     rows = []
@@ -129,37 +141,43 @@ def save_vote(nom, tel, media, votes):
 # 🔹 TRAITEMENT
 # ---------------------------------------------------
 if submitted:
-    if not nom or not tel or not media:
-        st.error("⚠️ Remplir tous les champs")
+    if not nom.strip():
+        st.error("⚠️ Entrez votre nom")
+    elif not tel.strip():
+        st.error("⚠️ Entrez votre téléphone")
+    elif not media.strip():
+        st.error("⚠️ Entrez votre média")
     else:
         ok = save_vote(nom, tel, media, vote_data)
         if ok:
-            st.success("✅ Vote enregistré !")
+            st.success("✅ Vote enregistré avec succès !")
         else:
-            st.error("⚠️ Déjà voté")
+            st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
 # 🔹 RESULTATS
 # ---------------------------------------------------
-st.header("📊 Classement")
+st.header("📊 Classements en temps réel")
 
 data = sheet.get_all_records()
 
 if data:
     df = pd.DataFrame(data)
-    df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
-    for cat in categories:
-        st.subheader(cat)
+    if "Points" in df.columns:
+        df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
-        df_cat = (
-            df[df["Categorie"] == cat]
-            .groupby("Candidat")["Points"]
-            .sum()
-            .reset_index()
-            .sort_values(by="Points", ascending=False)
-        )
+        for cat in categories:
+            st.subheader(cat)
 
-        df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
+            df_cat = (
+                df[df["Categorie"] == cat]
+                .groupby("Candidat")["Points"]
+                .sum()
+                .reset_index()
+                .sort_values(by="Points", ascending=False)
+            )
 
-        st.dataframe(df_cat, use_container_width=True, hide_index=True)
+            df_cat.insert(0, "Classement", range(1, len(df_cat) + 1))
+
+            st.dataframe(df_cat, use_container_width=True, hide_index=True)
