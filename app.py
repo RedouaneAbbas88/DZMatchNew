@@ -15,13 +15,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 def get_img(filename):
     return os.path.join(BASE_DIR, "Assets", filename)
 
-# ---------------------------------------------------
-# IMAGE PAR DEFAUT
-# ---------------------------------------------------
-DEFAULT_IMG = "default.jpg"  # ajoute une image par défaut dans Assets
+DEFAULT_IMG = "default.jpg"
 
 # ---------------------------------------------------
-# DONNÉES COMPLETES
+# DONNÉES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
@@ -61,13 +58,7 @@ categories = {
     ]
 }
 
-max_choices = {
-    "Meilleur joueur": 5,
-    "Meilleur gardien": 5,
-    "Meilleur club": 5,
-    "Meilleur entraîneur": 5
-}
-
+max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
@@ -79,14 +70,14 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# INFOS
+# INFOS VOTANT
 # ---------------------------------------------------
 nom = st.text_input("📝 Nom et prénom")
 tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
-# VOTE
+# VOTE AVEC SELECTBOX + IMAGE À DROITE
 # ---------------------------------------------------
 vote_data = {}
 
@@ -98,28 +89,28 @@ for cat, participants in categories.items():
 
         options = [p["name"] for p in participants if p["name"] not in selections]
 
-        choice = st.selectbox(
-            f"{cat} - Choix #{i}",
-            ["-- Choisir --"] + options,
-            key=f"{cat}_{i}"
-        )
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            choice = st.selectbox(
+                f"{cat} - Choix #{i}",
+                ["-- Choisir --"] + options,
+                key=f"{cat}_{i}"
+            )
+
+        with col2:
+            if choice != "-- Choisir --":
+                for p in participants:
+                    if p["name"] == choice:
+                        img_path = get_img(p["img"])
+
+                        if os.path.exists(img_path):
+                            st.image(img_path, width=70)
+                        else:
+                            st.image(get_img(DEFAULT_IMG), width=70)
 
         if choice != "-- Choisir --":
             selections.append(choice)
-
-            for p in participants:
-                if p["name"] == choice:
-                    img_path = get_img(p["img"])
-
-                    col1, col2 = st.columns([1, 4])
-                    with col1:
-                        if os.path.exists(img_path):
-                            st.image(img_path, width=60)
-                        else:
-                            st.image(get_img(DEFAULT_IMG), width=60)
-
-                    with col2:
-                        st.write(f"**{choice}**")
 
     vote_data[cat] = selections
 
@@ -157,7 +148,7 @@ if st.button("✅ Envoyer mon vote"):
         if ok:
             st.success("✅ Vote enregistré !")
         else:
-            st.error("⚠️ Déjà voté")
+            st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
 # RESULTATS
