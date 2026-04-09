@@ -4,9 +4,9 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 
-# ---------------------------------------------------
+# -------------------------
 # CONFIG
-# ---------------------------------------------------
+# -------------------------
 st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
@@ -17,9 +17,9 @@ def get_img(filename):
 
 DEFAULT_IMG = "default.jpg"
 
-# ---------------------------------------------------
-# DONNÉES
-# ---------------------------------------------------
+# -------------------------
+# CATEGORIES
+# -------------------------
 categories = {
     "Meilleur joueur": [
         {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
@@ -61,24 +61,24 @@ categories = {
 max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
-# ---------------------------------------------------
+# -------------------------
 # GOOGLE SHEETS
-# ---------------------------------------------------
+# -------------------------
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
-# ---------------------------------------------------
+# -------------------------
 # INFOS VOTANT
-# ---------------------------------------------------
+# -------------------------
 nom = st.text_input("📝 Nom et prénom")
 tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
-# ---------------------------------------------------
-# VOTE AVEC SELECTBOX + IMAGE À DROITE
-# ---------------------------------------------------
+# -------------------------
+# VOTE
+# -------------------------
 vote_data = {}
 
 for cat, participants in categories.items():
@@ -86,37 +86,31 @@ for cat, participants in categories.items():
     selections = []
 
     for i in range(1, max_choices[cat] + 1):
-
         options = [p["name"] for p in participants if p["name"] not in selections]
 
-        col1, col2 = st.columns([3, 1])
-
+        # --- COLONNES (PC) / Responsive mobile automatique ---
+        col1, col2 = st.columns([4, 1], gap="small")
         with col1:
-            choice = st.selectbox(
-                f"{cat} - Choix #{i}",
-                ["-- Choisir --"] + options,
-                key=f"{cat}_{i}"
-            )
+            choice = st.selectbox(f"{cat} - Choix #{i}", ["-- Choisir --"] + options, key=f"{cat}_{i}")
 
         with col2:
             if choice != "-- Choisir --":
                 for p in participants:
                     if p["name"] == choice:
                         img_path = get_img(p["img"])
-
                         if os.path.exists(img_path):
-                            st.image(img_path, width=70)
+                            st.image(img_path, width=50)
                         else:
-                            st.image(get_img(DEFAULT_IMG), width=70)
+                            st.image(get_img(DEFAULT_IMG), width=50)
 
         if choice != "-- Choisir --":
             selections.append(choice)
 
     vote_data[cat] = selections
 
-# ---------------------------------------------------
+# -------------------------
 # SAVE
-# ---------------------------------------------------
+# -------------------------
 def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
@@ -137,9 +131,9 @@ def save_vote(nom, tel, media, votes):
 
     return True
 
-# ---------------------------------------------------
+# -------------------------
 # ENVOI
-# ---------------------------------------------------
+# -------------------------
 if st.button("✅ Envoyer mon vote"):
     if not nom or not tel or not media:
         st.error("⚠️ Remplir tous les champs")
@@ -150,11 +144,10 @@ if st.button("✅ Envoyer mon vote"):
         else:
             st.error("⚠️ Vous avez déjà voté")
 
-# ---------------------------------------------------
+# -------------------------
 # RESULTATS
-# ---------------------------------------------------
+# -------------------------
 st.header("📊 Classements")
-
 data = sheet.get_all_records()
 
 if data:
@@ -163,15 +156,11 @@ if data:
 
     for cat in categories:
         st.subheader(cat)
-
         df_cat = (
             df[df["Categorie"] == cat]
-            .groupby("Candidat")["Points"]
-            .sum()
+            .groupby("Candidat")["Points"].sum()
             .reset_index()
             .sort_values(by="Points", ascending=False)
         )
-
         df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
-
         st.dataframe(df_cat, use_container_width=True, hide_index=True)
