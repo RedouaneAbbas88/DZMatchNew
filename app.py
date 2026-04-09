@@ -157,8 +157,9 @@ if st.session_state['page'] == 'vote':
 # PAGE DE RÉSULTATS
 # ---------------------------------------------------
 if st.session_state['page'] == 'results':
-    # Confettis foot
-    st.balloons()
+    # 🎉 Emoji ballon
+    st.markdown("⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
+
     # Logo
     st.image("Assets/logo.PNG", width=200)
     st.markdown("**✅ Vote enregistré ! Merci pour votre participation !**")
@@ -171,7 +172,23 @@ if st.session_state['page'] == 'results':
 
         for cat in categories:
             st.subheader(cat)
+
             df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
             df_cat = df_cat.sort_values(by="Points", ascending=False)
             df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
-            st.dataframe(df_cat, use_container_width=True, hide_index=True)
+
+            # Conversion propre
+            df_cat["Classement"] = df_cat["Classement"].astype(int)
+            df_cat["Points"] = df_cat["Points"].astype(int)
+
+            # 🔥 Tableau optimisé
+            st.data_editor(
+                df_cat,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Classement": st.column_config.NumberColumn("🏅", width="small"),
+                    "Candidat": st.column_config.TextColumn("👤 Candidat", width="large"),
+                    "Points": st.column_config.NumberColumn("⭐", width="small"),
+                }
+            )
