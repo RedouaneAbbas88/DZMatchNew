@@ -10,34 +10,64 @@ import os
 st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
-# ---------------------------------------------------
-# CHEMIN ABSOLU (IMPORTANT)
-# ---------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def get_img_path(filename):
+def get_img(filename):
     return os.path.join(BASE_DIR, "Assets", filename)
 
 # ---------------------------------------------------
-# DONNÉES (IMAGES DANS Assets/)
+# IMAGE PAR DEFAUT
+# ---------------------------------------------------
+DEFAULT_IMG = "default.jpg"  # ajoute une image par défaut dans Assets
+
+# ---------------------------------------------------
+# DONNÉES COMPLETES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
         {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
-        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"}
+        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
+        {"name": "Abderrahmane Meziane (CRB)", "img": DEFAULT_IMG},
+        {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
+        {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
+        {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
+        {"name": "Mehdi Boudjamaa (JSK)", "img": DEFAULT_IMG}
     ],
     "Meilleur gardien": [
-        {"name": "Oussama Benbout (USMA)", "img": "boulbina.jpg"}  # test
-    ],
-    "Meilleur entraîneur": [
-        {"name": "Khaled Benyahia (MCA)", "img": "mahious.jpg"}  # test
+        {"name": "Oussama Benbout (USMA)", "img": DEFAULT_IMG},
+        {"name": "Zakaria Bouhalfaya (CSC)", "img": DEFAULT_IMG},
+        {"name": "Abderrahmane Medjadel (ASO)", "img": DEFAULT_IMG},
+        {"name": "Tarek Boussder (ESS)", "img": DEFAULT_IMG},
+        {"name": "Abdelkader Salhi (MCEB)", "img": DEFAULT_IMG},
+        {"name": "Moustapha Zeghba (CRB)", "img": DEFAULT_IMG},
+        {"name": "Hadid Mohamed (JSK)", "img": DEFAULT_IMG},
+        {"name": "Ramdane Abdelatif (MCA)", "img": DEFAULT_IMG}
     ],
     "Meilleur club": [
-        {"name": "MCA", "img": "boulbina.jpg"}  # test
+        {"name": "MCA", "img": DEFAULT_IMG},
+        {"name": "USMA", "img": DEFAULT_IMG},
+        {"name": "CSC", "img": DEFAULT_IMG},
+        {"name": "CRB", "img": DEFAULT_IMG},
+        {"name": "JSK", "img": DEFAULT_IMG},
+        {"name": "PAC", "img": DEFAULT_IMG},
+        {"name": "ESS", "img": DEFAULT_IMG}
+    ],
+    "Meilleur entraîneur": [
+        {"name": "Khaled Benyahia (MCA)", "img": DEFAULT_IMG},
+        {"name": "Joseph Zinbauer (JSK)", "img": DEFAULT_IMG},
+        {"name": "Sead Ramovic (CRB)", "img": DEFAULT_IMG},
+        {"name": "Khereddine Madoui (CSC)", "img": DEFAULT_IMG},
+        {"name": "Bilal Dziri (PAC)", "img": DEFAULT_IMG}
     ]
 }
 
-max_choices = {cat: 2 for cat in categories}  # 2 pour test
+max_choices = {
+    "Meilleur joueur": 5,
+    "Meilleur gardien": 5,
+    "Meilleur club": 5,
+    "Meilleur entraîneur": 5
+}
+
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
@@ -49,48 +79,47 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# INFOS VOTANT
+# INFOS
 # ---------------------------------------------------
 nom = st.text_input("📝 Nom et prénom")
 tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
-# VOTE PAR CARTES (AVEC PHOTOS)
+# VOTE
 # ---------------------------------------------------
 vote_data = {}
 
 for cat, participants in categories.items():
     st.subheader(f"🏅 {cat}")
-
-    remaining = participants.copy()
     selections = []
 
     for i in range(1, max_choices[cat] + 1):
 
-        st.markdown(f"### Choix #{i}")
-        cols = st.columns(len(remaining))
+        options = [p["name"] for p in participants if p["name"] not in selections]
 
-        selected = None
+        choice = st.selectbox(
+            f"{cat} - Choix #{i}",
+            ["-- Choisir --"] + options,
+            key=f"{cat}_{i}"
+        )
 
-        for idx, p in enumerate(remaining):
-            with cols[idx]:
-                img_path = get_img_path(p["img"])
+        if choice != "-- Choisir --":
+            selections.append(choice)
 
-                # Vérification image
-                if os.path.exists(img_path):
-                    st.image(img_path, width=100)
-                else:
-                    st.warning(f"Image manquante: {p['img']}")
+            for p in participants:
+                if p["name"] == choice:
+                    img_path = get_img(p["img"])
 
-                st.write(p["name"])
+                    col1, col2 = st.columns([1, 4])
+                    with col1:
+                        if os.path.exists(img_path):
+                            st.image(img_path, width=60)
+                        else:
+                            st.image(get_img(DEFAULT_IMG), width=60)
 
-                if st.button("Choisir", key=f"{cat}_{i}_{p['name']}"):
-                    selected = p["name"]
-
-        if selected:
-            selections.append(selected)
-            remaining = [p for p in remaining if p["name"] != selected]
+                    with col2:
+                        st.write(f"**{choice}**")
 
     vote_data[cat] = selections
 
@@ -102,9 +131,9 @@ def save_vote(nom, tel, media, votes):
     df = pd.DataFrame(data)
 
     if not df.empty:
-        if "Nom" in df.columns and nom in df["Nom"].values:
+        if nom in df.get("Nom", []).values:
             return False
-        if "Téléphone" in df.columns and tel in df["Téléphone"].values:
+        if tel in df.get("Téléphone", []).values:
             return False
 
     rows = []
@@ -121,19 +150,14 @@ def save_vote(nom, tel, media, votes):
 # ENVOI
 # ---------------------------------------------------
 if st.button("✅ Envoyer mon vote"):
-
-    if not nom.strip():
-        st.error("⚠️ Entrez votre nom")
-    elif not tel.strip():
-        st.error("⚠️ Entrez votre téléphone")
-    elif not media.strip():
-        st.error("⚠️ Entrez votre média")
+    if not nom or not tel or not media:
+        st.error("⚠️ Remplir tous les champs")
     else:
         ok = save_vote(nom, tel, media, vote_data)
         if ok:
             st.success("✅ Vote enregistré !")
         else:
-            st.error("⚠️ Vous avez déjà voté")
+            st.error("⚠️ Déjà voté")
 
 # ---------------------------------------------------
 # RESULTATS
