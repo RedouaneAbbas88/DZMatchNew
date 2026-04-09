@@ -10,18 +10,18 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# IMAGE PAR DÉFAUT POUR CANDIDATS NON DISPONIBLES
+# IMAGE PAR DÉFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/default.jpg"  # Crée un fichier default.jpg pour les autres candidats
+DEFAULT_IMG = "Assets/default.jpg"
 
 # ---------------------------------------------------
-# DONNÉES CATEGORIES AVEC PHOTOS
+# DONNÉES CATEGORIES AVEC PHOTOS LOCALES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
-        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
-        {"name": "Abderrahmane Meziane (CRB)", "img": "test.jpg"},
+        {"name": "Adel Boulbina (PAC)", "img": "Assets/boulbina.jpg"},
+        {"name": "Aymen Mahious (CRB)", "img": "Assets/mahious.jpg"},
+        {"name": "Abderrahmane Meziane (CRB)", "img": DEFAULT_IMG},
         {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
         {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
         {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
@@ -53,10 +53,7 @@ categories = {
     ]
 }
 
-# ---------------------------------------------------
-# NOMBRE MAX DE CHOIX ET POINTS
-# ---------------------------------------------------
-max_choices = {"Meilleur joueur": 5, "Meilleur gardien": 5, "Meilleur entraîneur": 5, "Meilleur club": 5}
+max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
@@ -75,30 +72,40 @@ tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
-# VOTE PAR CLASSE AVEC PHOTOS
+# FONCTION DE SÉLECTION PAR CLASSE
 # ---------------------------------------------------
 vote_data = {}
-st.header("Sélection des candidats")
 
 for cat, participants in categories.items():
     st.subheader(f"🏅 {cat}")
-    remaining = participants.copy()
     selections = []
+    remaining_players = participants.copy()
 
     for i in range(1, max_choices[cat]+1):
-        st.markdown(f"**Choix #{i} :**")
-        col1, col2 = st.columns([2, 5])
-        # Liste déroulante vide par défaut
-        options = [p["name"] for p in remaining]
-        selected_name = col1.selectbox("Sélectionnez", [""] + options, key=f"{cat}_{i}")
+        st.markdown(f"**Classe #{i} :**")
 
-        # Affichage de la photo à côté
-        if selected_name:
-            p_img = next((p["img"] for p in remaining if p["name"] == selected_name), DEFAULT_IMG)
-            col2.image(p_img, width=100)
+        # Créer une liste pour selectionner
+        options = [p["name"] for p in remaining_players]
+        selected_name = st.selectbox(
+            "Sélectionnez un joueur",
+            [""] + options,  # ajout d'une option vide par défaut
+            key=f"{cat}_{i}"
+        )
+
+        if selected_name and selected_name not in selections:
+            # Trouver le joueur sélectionné pour l'image
+            p_img = next((p["img"] for p in remaining_players if p["name"] == selected_name), DEFAULT_IMG)
+            
+            # Affichage image + nom
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                st.image(p_img, width=80)
+            with col2:
+                st.markdown(f"**{selected_name}**")
+
             selections.append(selected_name)
-            # Retirer le candidat choisi
-            remaining = [p for p in remaining if p["name"] != selected_name]
+            # Retirer le joueur sélectionné pour les prochaines classes
+            remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
     vote_data[cat] = selections
 
@@ -146,9 +153,11 @@ if st.button("✅ Envoyer mon vote"):
 # ---------------------------------------------------
 st.header("📊 Classements")
 data = sheet.get_all_records()
+
 if data:
     df = pd.DataFrame(data)
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
+
     for cat in categories:
         st.subheader(cat)
         df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
