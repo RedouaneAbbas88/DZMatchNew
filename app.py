@@ -3,20 +3,21 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-# -----------------------------
-# CONFIGURATION STREAMLIT
-# -----------------------------
+# ---------------------------------------------------
+# CONFIG STREAMLIT
+# ---------------------------------------------------
 st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
-# -----------------------------
-# IMAGE PAR DEFAUT
-# -----------------------------
-DEFAULT_IMG = "default.jpg"  # mettre une image par défaut dans le dossier Assets
+# ---------------------------------------------------
+# CHEMIN DES IMAGES
+# ---------------------------------------------------
+ASSETS_PATH = "Assets/"
+DEFAULT_IMG = "default.jpg"
 
-# -----------------------------
-# LISTE DES CANDIDATS
-# -----------------------------
+# ---------------------------------------------------
+# DONNÉES CATEGORIES AVEC PHOTOS LOCALES
+# ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
         {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
@@ -25,10 +26,7 @@ categories = {
         {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
         {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
         {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
-        {"name": "Mehdi Boudjamaa (JSK)", "img": DEFAULT_IMG},
-        {"name": "Hocine Metref (MCA)", "img": DEFAULT_IMG},
-        {"name": "Rachid Nadji (CRB)", "img": DEFAULT_IMG},
-        {"name": "Abdelkader Ghezzal (JSK)", "img": DEFAULT_IMG}
+        {"name": "Mehdi Boudjamaa (JSK)", "img": DEFAULT_IMG}
     ],
     "Meilleur gardien": [
         {"name": "Oussama Benbout (USMA)", "img": DEFAULT_IMG},
@@ -59,69 +57,63 @@ categories = {
 max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
-# -----------------------------
+# ---------------------------------------------------
 # GOOGLE SHEETS
-# -----------------------------
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"]
+# ---------------------------------------------------
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
-# -----------------------------
+# ---------------------------------------------------
 # INFOS VOTANT
-# -----------------------------
-st.subheader("Informations du votant")
+# ---------------------------------------------------
 nom = st.text_input("📝 Nom et prénom")
 tel = st.text_input("📞 Téléphone (9 chiffres)")
+media = st.text_input("📸 Média")
 
-# -----------------------------
-# FONCTION POUR VALIDER LE NUMERO
-# -----------------------------
-def valid_tel(t):
-    return t.isdigit() and len(t) == 9
+# ---------------------------------------------------
+# VALIDATION DU NUMERO DE TELEPHONE
+# ---------------------------------------------------
+def is_valid_phone(number):
+    return number.isdigit() and len(number) == 9
 
-# -----------------------------
-# VOTE PAR CATEGORIE
-# -----------------------------
+# ---------------------------------------------------
+# VOTE
+# ---------------------------------------------------
 vote_data = {}
 
 for cat, participants in categories.items():
     st.subheader(f"🏅 {cat}")
     remaining = participants.copy()
-    selections = []
+    selections = [None] * max_choices[cat]  # vide par défaut
 
-    for i in range(1, max_choices[cat]+1):
-        st.markdown(f"**Choix #{i} :**")
+    for i in range(max_choices[cat]):
+        # Crée la liste déroulante des candidats encore disponibles
         options = [p["name"] for p in remaining]
-        default_index = 0  # ne pas pré-remplir
-        selected_name = st.selectbox(
-            "Sélectionner le candidat",
-            options=[""] + options,  # vide par défaut
-            index=default_index,
-            key=f"{cat}_{i}"
-        )
+        selected = st.selectbox(f"Choix #{i+1} pour {cat} :", [""] + options, key=f"{cat}_{i}")
 
-        if selected_name != "":
-            # Afficher la photo à côté
-            p_img = next((p["img"] for p in remaining if p["name"] == selected_name), DEFAULT_IMG)
-            col1, col2 = st.columns([1,4])
-            with col1:
-                st.image(p_img, width=80)
-            with col2:
-                st.write(selected_name)
-            selections.append(selected_name)
-            # Retirer de la liste pour le prochain choix
-            remaining = [p for p in remaining if p["name"] != selected_name]
+        if selected != "" and selected not in selections:
+            selections[i] = selected
+            # Supprime le joueur sélectionné pour ne plus l’afficher
+            remaining = [p for p in remaining if p["name"] != selected]
 
-    vote_data[cat] = selections
+        # Affiche la photo du choix déjà fait
+        if selections[i]:
+            p_img_name = next((p["img"] for p in participants if p["name"] == selections[i]), DEFAULT_IMG)
+            p_img_path = ASSETS_PATH + p_img_name
+            st.image(p_img_path, width=80, caption=selections[i])
 
-# -----------------------------
+    vote_data[cat] = [s for s in selections if s]
+
+# ---------------------------------------------------
 # ENREGISTRER LE VOTE
-# -----------------------------
-def save_vote(nom, tel, votes):
+# ---------------------------------------------------
+def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
+    # Vérifie si le votant existe déjà
     if not df.empty:
         if "Téléphone" in df.columns and tel in df["Téléphone"].values:
             return False
@@ -129,35 +121,41 @@ def save_vote(nom, tel, votes):
     rows = []
     for cat, selections in votes.items():
         for i, candidat in enumerate(selections, start=1):
-            rows.append([nom, tel, cat, candidat, points.get(i,0)])
+            rows.append([nom, tel, media, cat, candidat, i, points.get(i, 0)])
 
     for r in rows:
         sheet.append_row(r)
+
     return True
 
-# -----------------------------
+# ---------------------------------------------------
 # BOUTON ENVOI
-# -----------------------------
+# ---------------------------------------------------
 if st.button("✅ Envoyer mon vote"):
+
     if not nom.strip():
         st.error("⚠️ Entrez votre nom")
-    elif not valid_tel(tel.strip()):
-        st.error("⚠️ Numéro invalide. Doit contenir 9 chiffres.")
+    elif not is_valid_phone(tel.strip()):
+        st.error("⚠️ Entrez un numéro valide de 9 chiffres")
+    elif not media.strip():
+        st.error("⚠️ Entrez votre média")
     else:
-        ok = save_vote(nom.strip(), tel.strip(), vote_data)
+        ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
         if ok:
             st.success("✅ Vote enregistré !")
         else:
-            st.error("⚠️ Ce numéro a déjà voté")
+            st.error("⚠️ Ce numéro de téléphone a déjà voté")
 
-# -----------------------------
+# ---------------------------------------------------
 # RESULTATS
-# -----------------------------
+# ---------------------------------------------------
 st.header("📊 Classements")
 data = sheet.get_all_records()
+
 if data:
     df = pd.DataFrame(data)
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
+
     for cat in categories:
         st.subheader(cat)
         df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
