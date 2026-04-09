@@ -69,7 +69,7 @@ sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").works
 # INFOS VOTANT
 # ---------------------------------------------------
 nom = st.text_input("📝 Nom et prénom")
-tel = st.text_input("📞 Téléphone (10 chiffres)")
+tel = st.text_input("📞 Téléphone ")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
@@ -136,7 +136,7 @@ if st.button("✅ Envoyer mon vote"):
     if not nom.strip():
         st.error("⚠️ Entrez votre nom")
     elif not is_valid_phone(tel.strip()):
-        st.error("⚠️ Entrez un numéro valide de 10 chiffres")
+        st.error("⚠️ Entrez un numéro valide de 9 chiffres")
     elif not media.strip():
         st.error("⚠️ Entrez votre média")
     else:
