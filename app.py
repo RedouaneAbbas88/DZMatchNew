@@ -12,7 +12,7 @@ st.title("🏆 DZBEST 2025")
 # ---------------------------------------------------
 # IMAGES PAR DÉFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/default.jpg"
+DEFAULT_IMG = "Assets/defqult.jpg"
 
 # ---------------------------------------------------
 # DONNÉES CATEGORIES AVEC PHOTOS LOCALES
@@ -21,19 +21,19 @@ categories = {
     "Meilleur joueur": [
         {"name": "Adel Boulbina (PAC)", "img": "Assets/boulbina.jpg"},
         {"name": "Aymen Mahious (CRB)", "img": "Assets/mahious.jpg"},
-        {"name": "Abderrahmane Meziane (CRB)", "img": DEFAULT_IMG},
-        {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
-        {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
-        {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
-        {"name": "Mehdi Boudjamaa (JSK)", "img": DEFAULT_IMG}
+        {"name": "Abderrahmane Meziane (CRB)", "img": "defqult.jpg"},
+        {"name": "Ibrahim Dib (CSC)", "img": "defqult.jpg"},
+        {"name": "Salim Boukhenchouch (USMA)", "img": "defqult.jpg"},
+        {"name": "Larbi Tabti (MCA)", "img": "defqult.jpg"},
+        {"name": "Mehdi Boudjamaa (JSK)", "img": "defqult.jpg"}
     ],
     "Meilleur gardien": [
-        {"name": "Oussama Benbout (USMA)", "img": DEFAULT_IMG},
-        {"name": "Zakaria Bouhalfaya (CSC)", "img": DEFAULT_IMG},
-        {"name": "Abderrahmane Medjadel (ASO)", "img": DEFAULT_IMG},
-        {"name": "Tarek Boussder (ESS)", "img": DEFAULT_IMG},
-        {"name": "Abdelkader Salhi (MCEB)", "img": DEFAULT_IMG},
-        {"name": "Moustapha Zeghba (CRB)", "img": DEFAULT_IMG}
+        {"name": "Oussama Benbout (USMA)", "img": "defqult.jpg"},
+        {"name": "Zakaria Bouhalfaya (CSC)", "img": "defqult.jpg"},
+        {"name": "Abderrahmane Medjadel (ASO)", "img": "defqult.jpg"},
+        {"name": "Tarek Boussder (ESS)", "img": "defqult.jpg"},
+        {"name": "Abdelkader Salhi (MCEB)", "img": "defqult.jpg"},
+        {"name": "Moustapha Zeghba (CRB)", "img": "defqult.jpg"}
     ]
 }
 
@@ -59,7 +59,7 @@ media = st.text_input("📸 Média")
 # VALIDATION NUMÉRO TÉLÉPHONE
 # ---------------------------------------------------
 def is_valid_phone(t):
-    return t.isdigit() and len(t) == 9  # Algérie = 9 chiffres
+    return t.isdigit() and len(t) == 9  # Numéro mobile Algérie = 9 chiffres
 
 # ---------------------------------------------------
 # VOTE PAR CLASSE AVEC AFFICHAGE PHOTO
