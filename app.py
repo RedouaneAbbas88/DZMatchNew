@@ -20,37 +20,37 @@ DEFAULT_IMG = "Assets/defqult.jpg"  # image par défaut pour les candidats sans 
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
-        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
-        {"name": "Abderrahmane Meziane (CRB)", "img": "defqult.jpg"},
-        {"name": "Ibrahim Dib (CSC)", "img": "defqult.jpg"},
-        {"name": "Salim Boukhenchouch (USMA)", "img": "defqult.jpg"},
-        {"name": "Larbi Tabti (MCA)", "img": "defqult.jpg"},
-        {"name": "Mehdi Boudjamaa (JSK)", "img": "defqult.jpg"}
+        {"name": "Ferhat (mca)", "img": "boulbina.jpg"},
+        {"name": "khacef (crb)", "img": "mahious.jpg"},
+        {"name": "ghacha (usma)", "img": "defqult.jpg"},
+        {"name": "belaid (jsk)", "img": "defqult.jpg"},
+        {"name": "zerrouki (ess)", "img": "defqult.jpg"},
+        {"name": "abada (aso/usma)", "img": "defqult.jpg"}
     ],
     "Meilleur gardien": [
-        {"name": "Oussama Benbout (USMA)", "img": "defqult.jpg"},
-        {"name": "Zakaria Bouhalfaya (CSC)", "img": "defqult.jpg"},
-        {"name": "Abderrahmane Medjadel (ASO)", "img": "defqult.jpg"},
-        {"name": "Tarek Boussder (ESS)", "img": "defqult.jpg"},
-        {"name": "Abdelkader Salhi (MCEB)", "img": "defqult.jpg"},
-        {"name": "Moustapha Zeghba (CRB)", "img": "defqult.jpg"}
+        {"name": "salhi (jss)", "img": "defqult.jpg"},
+        {"name": "benbout (usma)", "img": "defqult.jpg"},
+        {"name": "guendouz (mca)", "img": "defqult.jpg"},
+        {"name": "bouhalfaia (csc)", "img": "defqult.jpg"},
+        {"name": "chaal (crb)", "img": "defqult.jpg"},
+        {"name": "Ghaya merbah (jsk)", "img": "defqult.jpg"}
     ],
     "Meilleur entraîneur": [
-        {"name": "Khaled Benyahia (MCA)", "img": "defqult.jpg"},
-        {"name": "Joseph Zinbauer (JSK)", "img": "defqult.jpg"},
-        {"name": "Sead Ramovic (CRB)", "img": "defqult.jpg"},
-        {"name": "Khereddine Madoui (CSC)", "img": "defqult.jpg"},
-        {"name": "Bilal Dziri (PAC)", "img": "defqult.jpg"}
+        {"name": "Zegoud (Étoile de Ben Aknoun)", "img": "defqult.jpg"},
+        {"name": "Lotfi Amrouche (Akbou / Sétif)", "img": "defqult.jpg"},
+        {"name": "Ramović (CR Belouizdad)", "img": "defqult.jpg"},
+        {"name": "Belaïd (Olympique Akbou)", "img": "defqult.jpg"},
+        {"name": "Amrani (JS Saoura)", "img": "defqult.jpg"},
+        {"name": "Chérif El Ouazzani (MC Oran)", "img": "defqult.jpg"}
     ],
     "Meilleur club": [
         {"name": "MCA", "img": "defqult.jpg"},
         {"name": "USMA", "img": "defqult.jpg"},
-        {"name": "CSC", "img": "defqult.jpg"},
+        {"name": "MCO", "img": "defqult.jpg"},
         {"name": "CRB", "img": "defqult.jpg"},
         {"name": "JSK", "img": "defqult.jpg"},
-        {"name": "PAC", "img": "defqult.jpg"},
-        {"name": "ESS", "img": "defqult.jpg"}
+        {"name": "O. Akbou", "img": "defqult.jpg"},
+        {"name": "ESBA", "img": "defqult.jpg"}
     ]
 }
 
@@ -164,4 +164,4 @@ if st.button("✅ Envoyer mon vote"):
                     df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
                     st.dataframe(df_cat, use_container_width=True, hide_index=True)
         else:
-            st.error("⚠️ Ce numéro de téléphone a déjà voté")
+            st.error("⚠️ Vous avez déjà voté")
