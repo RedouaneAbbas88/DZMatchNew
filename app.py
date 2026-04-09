@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import os
 
 # ---------------------------------------------------
 # CONFIG STREAMLIT
@@ -10,12 +11,12 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# IMAGE PAR DÉFAUT
+# IMAGES PAR DEFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/default.jpg"
+DEFAULT_IMG = "Assets/default.jpg"  # image placeholder pour les candidats sans photo
 
 # ---------------------------------------------------
-# DONNÉES CATEGORIES AVEC PHOTOS LOCALES
+# DONNÉES CATEGORIES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
@@ -53,7 +54,7 @@ categories = {
     ]
 }
 
-max_choices = {cat: 5 for cat in categories}
+max_choices = {cat: 5 for cat in categories}  # Top 5 par catégorie
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
@@ -72,40 +73,48 @@ tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
-# FONCTION DE SÉLECTION PAR CLASSE
+# VALIDATION TELEPHONE ALGÉRIE
+# ---------------------------------------------------
+def validate_phone(phone):
+    phone_clean = phone.replace(" ", "").replace("-", "")
+    if not phone_clean.isdigit() and not phone_clean.startswith("+213"):
+        return False, "⚠️ Le numéro doit contenir uniquement des chiffres"
+    if phone_clean.startswith("0") and len(phone_clean) == 10:
+        return True, ""
+    elif phone_clean.startswith("+213") and len(phone_clean) == 13:
+        return True, ""
+    else:
+        return False, "⚠️ Numéro invalide : doit être 0xxxxxxxxx ou +213xxxxxxxxx"
+
+# ---------------------------------------------------
+# VOTE PAR CLASSE
 # ---------------------------------------------------
 vote_data = {}
 
 for cat, participants in categories.items():
     st.subheader(f"🏅 {cat}")
-    selections = []
     remaining_players = participants.copy()
+    selections = []
 
     for i in range(1, max_choices[cat]+1):
-        st.markdown(f"**Classe #{i} :**")
-
-        # Créer une liste pour selectionner
-        options = [p["name"] for p in remaining_players]
-        selected_name = st.selectbox(
-            "Sélectionnez un joueur",
-            [""] + options,  # ajout d'une option vide par défaut
+        st.markdown(f"**Choix #{i} :**")
+        cols = st.columns([3, 7])  # colonne petite pour image, grande pour nom
+        selected_player_name = st.selectbox(
+            f"Sélectionnez le joueur pour Choix #{i}",
+            options=[p["name"] for p in remaining_players],
             key=f"{cat}_{i}"
         )
 
-        if selected_name and selected_name not in selections:
-            # Trouver le joueur sélectionné pour l'image
-            p_img = next((p["img"] for p in remaining_players if p["name"] == selected_name), DEFAULT_IMG)
-            
-            # Affichage image + nom
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                st.image(p_img, width=80)
-            with col2:
-                st.markdown(f"**{selected_name}**")
+        # Afficher l'image à côté du nom
+        p_img = next((p["img"] for p in remaining_players if p["name"] == selected_player_name), DEFAULT_IMG)
+        with cols[0]:
+            st.image(p_img, width=80)
+        with cols[1]:
+            st.write(selected_player_name)
 
-            selections.append(selected_name)
-            # Retirer le joueur sélectionné pour les prochaines classes
-            remaining_players = [p for p in remaining_players if p["name"] != selected_name]
+        selections.append(selected_player_name)
+        # Retire le joueur sélectionné pour le choix suivant
+        remaining_players = [p for p in remaining_players if p["name"] != selected_player_name]
 
     vote_data[cat] = selections
 
@@ -116,6 +125,7 @@ def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
+    # Vérifie double vote
     if not df.empty:
         if "Nom" in df.columns and nom in df["Nom"].values:
             return False
@@ -139,14 +149,18 @@ if st.button("✅ Envoyer mon vote"):
         st.error("⚠️ Entrez votre nom")
     elif not tel.strip():
         st.error("⚠️ Entrez votre téléphone")
-    elif not media.strip():
-        st.error("⚠️ Entrez votre média")
     else:
-        ok = save_vote(nom, tel, media, vote_data)
-        if ok:
-            st.success("✅ Vote enregistré !")
+        is_valid, msg_error = validate_phone(tel)
+        if not is_valid:
+            st.error(msg_error)
+        elif not media.strip():
+            st.error("⚠️ Entrez votre média")
         else:
-            st.error("⚠️ Vous avez déjà voté")
+            ok = save_vote(nom, tel, media, vote_data)
+            if ok:
+                st.success("✅ Vote enregistré !")
+            else:
+                st.error("⚠️ Vous avez déjà voté avec ce nom ou ce numéro de téléphone")
 
 # ---------------------------------------------------
 # RESULTATS
