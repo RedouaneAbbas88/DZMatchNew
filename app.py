@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from PIL import Image
 
 # ---------------------------------------------------
 # CONFIG STREAMLIT
@@ -12,15 +13,15 @@ st.title("🏆 DZBEST 2025")
 # ---------------------------------------------------
 # IMAGES PAR DÉFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/defqult.jpg"
+DEFAULT_IMG = "Assets/defqult.jpg"  # image par défaut pour les candidats sans photo
 
 # ---------------------------------------------------
 # DONNÉES CATEGORIES AVEC PHOTOS LOCALES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Adel Boulbina (PAC)", "img": "Assets/boulbina.jpg"},
-        {"name": "Aymen Mahious (CRB)", "img": "Assets/mahious.jpg"},
+        {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
+        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
         {"name": "Abderrahmane Meziane (CRB)", "img": "defqult.jpg"},
         {"name": "Ibrahim Dib (CSC)", "img": "defqult.jpg"},
         {"name": "Salim Boukhenchouch (USMA)", "img": "defqult.jpg"},
@@ -34,6 +35,22 @@ categories = {
         {"name": "Tarek Boussder (ESS)", "img": "defqult.jpg"},
         {"name": "Abdelkader Salhi (MCEB)", "img": "defqult.jpg"},
         {"name": "Moustapha Zeghba (CRB)", "img": "defqult.jpg"}
+    ],
+    "Meilleur entraîneur": [
+        {"name": "Khaled Benyahia (MCA)", "img": "defqult.jpg"},
+        {"name": "Joseph Zinbauer (JSK)", "img": "defqult.jpg"},
+        {"name": "Sead Ramovic (CRB)", "img": "defqult.jpg"},
+        {"name": "Khereddine Madoui (CSC)", "img": "defqult.jpg"},
+        {"name": "Bilal Dziri (PAC)", "img": "defqult.jpg"}
+    ],
+    "Meilleur club": [
+        {"name": "MCA", "img": "defqult.jpg"},
+        {"name": "USMA", "img": "defqult.jpg"},
+        {"name": "CSC", "img": "defqult.jpg"},
+        {"name": "CRB", "img": "defqult.jpg"},
+        {"name": "JSK", "img": "defqult.jpg"},
+        {"name": "PAC", "img": "defqult.jpg"},
+        {"name": "ESS", "img": "defqult.jpg"}
     ]
 }
 
@@ -51,15 +68,15 @@ sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").works
 # ---------------------------------------------------
 # INFOS VOTANT
 # ---------------------------------------------------
-nom = st.text_input("📝 Nom et prénom")
-tel = st.text_input("📞 Téléphone")
-media = st.text_input("📸 Média")
+nom = st.text_input("📝 Nom et prénom", "")
+tel = st.text_input("📞 Téléphone", "")
+media = st.text_input("📸 Média", "")
 
 # ---------------------------------------------------
 # VALIDATION NUMÉRO TÉLÉPHONE
 # ---------------------------------------------------
 def is_valid_phone(t):
-    return t.isdigit() and len(t) == 9  # Numéro mobile Algérie = 9 chiffres
+    return t.isdigit() and len(t) == 9
 
 # ---------------------------------------------------
 # VOTE PAR CLASSE AVEC AFFICHAGE PHOTO
@@ -78,10 +95,12 @@ for cat, participants in categories.items():
 
         if selected_name != "--- Sélectionnez ---":
             selections.append(selected_name)
+            # Retirer le joueur choisi pour ne pas l'afficher dans la prochaine sélection
             remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
             # Affichage de la photo à côté
-            p_img_path = next((p["img"] for p in participants if p["name"] == selected_name), DEFAULT_IMG)
+            p_img_name = next((p["img"] for p in participants if p["name"] == selected_name), "defqult.jpg")
+            p_img_path = f"Assets/{p_img_name}"  # chemin exact
             col1, col2 = st.columns([1, 5])
             with col1:
                 st.image(p_img_path, width=80)
@@ -97,6 +116,7 @@ def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
+    # Vérifier si le téléphone a déjà voté
     if not df.empty:
         if "Téléphone" in df.columns and tel in df["Téléphone"].values:
             return False
@@ -111,7 +131,7 @@ def save_vote(nom, tel, media, votes):
     return True
 
 # ---------------------------------------------------
-# BOUTON ENVOI VOTE + PAGE DE CONFIRMATION
+# BOUTON ENVOI VOTE + PAGE DE CONFIRMATION AVEC LOGO + RÉSULTATS
 # ---------------------------------------------------
 if st.button("✅ Envoyer mon vote"):
 
@@ -124,13 +144,14 @@ if st.button("✅ Envoyer mon vote"):
     else:
         ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
         if ok:
-            # 🎉 Affichage direct de la page de confirmation
-            st.markdown("### ⚽⚽⚽ Vote enregistré avec succès ! ⚽⚽⚽")
+            # 🎉 Confettis foot
             st.balloons()
-            st.image("Assets/logo.PNG", width=200)
-            st.markdown("**Merci pour votre participation ! Voici les résultats actuels :**")
 
-            # Affichage résultats directement
+            # Page de confirmation
+            st.image("Assets/logo.PNG", width=200)
+            st.markdown("**✅ Vote enregistré ! Merci pour votre participation !**")
+
+            # Affichage immédiat des résultats
             data = sheet.get_all_records()
             if data:
                 df = pd.DataFrame(data)
