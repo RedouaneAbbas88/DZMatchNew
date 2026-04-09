@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import os
 
 # ---------------------------------------------------
 # CONFIG STREAMLIT
@@ -13,7 +12,7 @@ st.title("🏆 DZBEST 2025")
 # ---------------------------------------------------
 # IMAGES PAR DEFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/default.jpg"  # image placeholder pour les candidats sans photo
+DEFAULT_IMG = "Assets/default.jpg"  # placeholder pour candidats sans photo
 
 # ---------------------------------------------------
 # DONNÉES CATEGORIES
@@ -54,7 +53,7 @@ categories = {
     ]
 }
 
-max_choices = {cat: 5 for cat in categories}  # Top 5 par catégorie
+max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
@@ -77,11 +76,9 @@ media = st.text_input("📸 Média")
 # ---------------------------------------------------
 def validate_phone(phone):
     phone_clean = phone.replace(" ", "").replace("-", "")
-    if not phone_clean.isdigit() and not phone_clean.startswith("+213"):
-        return False, "⚠️ Le numéro doit contenir uniquement des chiffres"
-    if phone_clean.startswith("0") and len(phone_clean) == 10:
+    if phone_clean.startswith("0") and len(phone_clean) == 10 and phone_clean.isdigit():
         return True, ""
-    elif phone_clean.startswith("+213") and len(phone_clean) == 13:
+    elif phone_clean.startswith("+213") and len(phone_clean) == 13 and phone_clean[1:].isdigit():
         return True, ""
     else:
         return False, "⚠️ Numéro invalide : doit être 0xxxxxxxxx ou +213xxxxxxxxx"
@@ -98,23 +95,27 @@ for cat, participants in categories.items():
 
     for i in range(1, max_choices[cat]+1):
         st.markdown(f"**Choix #{i} :**")
-        cols = st.columns([3, 7])  # colonne petite pour image, grande pour nom
+        cols = st.columns([3, 7])
+
+        # Ajouter une option vide au début pour que selectbox commence vide
+        select_options = [""] + [p["name"] for p in remaining_players]
         selected_player_name = st.selectbox(
-            f"Sélectionnez le joueur pour Choix #{i}",
-            options=[p["name"] for p in remaining_players],
+            f"Choisissez le joueur pour Choix #{i}",
+            options=select_options,
             key=f"{cat}_{i}"
         )
 
-        # Afficher l'image à côté du nom
-        p_img = next((p["img"] for p in remaining_players if p["name"] == selected_player_name), DEFAULT_IMG)
-        with cols[0]:
-            st.image(p_img, width=80)
-        with cols[1]:
-            st.write(selected_player_name)
+        if selected_player_name:
+            # Afficher image et nom seulement si un choix est fait
+            p_img = next((p["img"] for p in remaining_players if p["name"] == selected_player_name), DEFAULT_IMG)
+            with cols[0]:
+                st.image(p_img, width=80)
+            with cols[1]:
+                st.write(selected_player_name)
 
-        selections.append(selected_player_name)
-        # Retire le joueur sélectionné pour le choix suivant
-        remaining_players = [p for p in remaining_players if p["name"] != selected_player_name]
+            selections.append(selected_player_name)
+            # Retire le joueur sélectionné
+            remaining_players = [p for p in remaining_players if p["name"] != selected_player_name]
 
     vote_data[cat] = selections
 
@@ -125,7 +126,6 @@ def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
-    # Vérifie double vote
     if not df.empty:
         if "Nom" in df.columns and nom in df["Nom"].values:
             return False
@@ -167,7 +167,6 @@ if st.button("✅ Envoyer mon vote"):
 # ---------------------------------------------------
 st.header("📊 Classements")
 data = sheet.get_all_records()
-
 if data:
     df = pd.DataFrame(data)
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
