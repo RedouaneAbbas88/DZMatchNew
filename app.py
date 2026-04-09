@@ -99,7 +99,7 @@ for cat, participants in categories.items():
                     if p["name"] == choice:
                         img_path = get_img(p["img"])
                         if os.path.exists(img_path):
-                            st.image(img_path, width=50)
+                            st.image(img_path, width=40)
                         else:
                             st.image(get_img(DEFAULT_IMG), width=50)
 
