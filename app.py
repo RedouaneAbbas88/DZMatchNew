@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from PIL import Image
 
 # ---------------------------------------------------
 # CONFIG STREAMLIT
@@ -10,7 +11,13 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# IMAGE PAR DÉFAUT
+# NAVIGATION
+# ---------------------------------------------------
+if "page" not in st.session_state:
+    st.session_state.page = "vote"
+
+# ---------------------------------------------------
+# IMAGES PAR DÉFAUT
 # ---------------------------------------------------
 DEFAULT_IMG = "Assets/defqult.jpg"
 
@@ -59,23 +66,15 @@ points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 # ---------------------------------------------------
 # GOOGLE SHEETS
 # ---------------------------------------------------
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
-          "https://www.googleapis.com/auth/drive"]
-
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# NAVIGATION
-# ---------------------------------------------------
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'vote'
-
-# ---------------------------------------------------
 # PAGE VOTE
 # ---------------------------------------------------
-if st.session_state['page'] == 'vote':
+if st.session_state.page == "vote":
 
     nom = st.text_input("📝 Nom et prénom", "")
     tel = st.text_input("📞 Téléphone", "")
@@ -93,7 +92,6 @@ if st.session_state['page'] == 'vote':
 
         for i in range(1, max_choices[cat]+1):
             st.markdown(f"**Choix #{i} :**")
-
             options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
             selected_name = st.selectbox(f"Classe {i} - {cat}", options, key=f"{cat}_{i}")
 
@@ -140,22 +138,21 @@ if st.session_state['page'] == 'vote':
         else:
             ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
             if ok:
-                st.session_state['page'] = 'results'
+                st.session_state.page = "results"
                 st.rerun()
             else:
                 st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
-# PAGE RÉSULTATS
+# PAGE RÉSULTATS (NOUVELLE PAGE)
 # ---------------------------------------------------
-if st.session_state['page'] == 'results':
+if st.session_state.page == "results":
 
-    st.markdown("### ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
+    st.markdown("### ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
     st.image("Assets/logo.PNG", width=200)
     st.markdown("**✅ Vote enregistré ! Merci pour votre participation !**")
 
     data = sheet.get_all_records()
-
     if data:
         df = pd.DataFrame(data)
         df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
@@ -167,16 +164,4 @@ if st.session_state['page'] == 'results':
             df_cat = df_cat.sort_values(by="Points", ascending=False)
             df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
 
-            df_cat["Classement"] = df_cat["Classement"].astype(int)
-            df_cat["Points"] = df_cat["Points"].astype(int)
-
-            st.data_editor(
-                df_cat,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Classement": st.column_config.NumberColumn("🏅", width="small"),
-                    "Candidat": st.column_config.TextColumn("👤 Candidat", width="large"),
-                    "Points": st.column_config.NumberColumn("⭐", width="small"),
-                }
-            )
+            st.dataframe(df_cat, use_container_width=True, hide_index=True)
