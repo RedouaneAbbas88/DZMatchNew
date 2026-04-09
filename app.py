@@ -10,12 +10,12 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# IMAGES PAR DÉFAUT
+# IMAGE PAR DÉFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/defqult.jpg"  # image par défaut
+DEFAULT_IMG = "Assets/defqult.jpg"
 
 # ---------------------------------------------------
-# DONNÉES CATEGORIES AVEC PHOTOS LOCALES
+# DONNÉES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
@@ -61,30 +61,29 @@ points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 # ---------------------------------------------------
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
+
 creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# INFOS VOTANT
+# NAVIGATION
 # ---------------------------------------------------
 if 'page' not in st.session_state:
     st.session_state['page'] = 'vote'
 
+# ---------------------------------------------------
+# PAGE VOTE
+# ---------------------------------------------------
 if st.session_state['page'] == 'vote':
+
     nom = st.text_input("📝 Nom et prénom", "")
     tel = st.text_input("📞 Téléphone", "")
     media = st.text_input("📸 Média", "")
 
-    # ---------------------------------------------------
-    # VALIDATION NUMÉRO TÉLÉPHONE
-    # ---------------------------------------------------
     def is_valid_phone(t):
         return t.isdigit() and len(t) == 9
 
-    # ---------------------------------------------------
-    # VOTE PAR CLASSE AVEC AFFICHAGE PHOTO
-    # ---------------------------------------------------
     vote_data = {}
 
     for cat, participants in categories.items():
@@ -94,6 +93,7 @@ if st.session_state['page'] == 'vote':
 
         for i in range(1, max_choices[cat]+1):
             st.markdown(f"**Choix #{i} :**")
+
             options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
             selected_name = st.selectbox(f"Classe {i} - {cat}", options, key=f"{cat}_{i}")
 
@@ -101,9 +101,9 @@ if st.session_state['page'] == 'vote':
                 selections.append(selected_name)
                 remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
-                # Affichage de la photo
                 p_img_name = next((p["img"] for p in participants if p["name"] == selected_name), "defqult.jpg")
                 p_img_path = f"Assets/{p_img_name}"
+
                 col1, col2 = st.columns([1, 5])
                 with col1:
                     st.image(p_img_path, width=80)
@@ -112,14 +112,10 @@ if st.session_state['page'] == 'vote':
 
         vote_data[cat] = selections
 
-    # ---------------------------------------------------
-    # FONCTION POUR ENREGISTRER LE VOTE
-    # ---------------------------------------------------
     def save_vote(nom, tel, media, votes):
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
 
-        # Vérifier si le téléphone a déjà voté
         if not df.empty:
             if "Téléphone" in df.columns and tel in df["Téléphone"].values:
                 return False
@@ -133,9 +129,6 @@ if st.session_state['page'] == 'vote':
             sheet.append_row(r)
         return True
 
-    # ---------------------------------------------------
-    # BOUTON ENVOI VOTE
-    # ---------------------------------------------------
     if st.button("✅ Envoyer mon vote"):
 
         if not nom.strip():
@@ -147,25 +140,22 @@ if st.session_state['page'] == 'vote':
         else:
             ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
             if ok:
-                # Stocker page résultats
                 st.session_state['page'] = 'results'
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
-# PAGE DE RÉSULTATS
+# PAGE RÉSULTATS
 # ---------------------------------------------------
 if st.session_state['page'] == 'results':
-    # 🎉 Emoji ballon
-    st.markdown("⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
 
-    # Logo
+    st.markdown("### ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
     st.image("Assets/logo.PNG", width=200)
     st.markdown("**✅ Vote enregistré ! Merci pour votre participation !**")
 
-    # Affichage des résultats
     data = sheet.get_all_records()
+
     if data:
         df = pd.DataFrame(data)
         df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
@@ -177,11 +167,9 @@ if st.session_state['page'] == 'results':
             df_cat = df_cat.sort_values(by="Points", ascending=False)
             df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
 
-            # Conversion propre
             df_cat["Classement"] = df_cat["Classement"].astype(int)
             df_cat["Points"] = df_cat["Points"].astype(int)
 
-            # 🔥 Tableau optimisé
             st.data_editor(
                 df_cat,
                 use_container_width=True,
