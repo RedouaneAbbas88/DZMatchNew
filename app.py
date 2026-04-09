@@ -69,14 +69,14 @@ sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").works
 # INFOS VOTANT
 # ---------------------------------------------------
 nom = st.text_input("📝 Nom et prénom")
-tel = st.text_input("📞 Téléphone (9 chiffres)")
+tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
 # VALIDATION DU NUMERO DE TELEPHONE
 # ---------------------------------------------------
 def is_valid_phone(number):
-    return number.isdigit() and len(number) == 9
+    return number.isdigit() and len(number) == 10
 
 # ---------------------------------------------------
 # VOTE
