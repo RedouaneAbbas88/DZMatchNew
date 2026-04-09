@@ -10,9 +10,9 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# IMAGE PAR DÉFAUT
+# IMAGES PAR DÉFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/defqult.jpg"
+DEFAULT_IMG = "Assets/defqult.jpg"  # image par défaut pour les candidats sans photo
 
 # ---------------------------------------------------
 # DONNÉES CATEGORIES AVEC PHOTOS LOCALES
@@ -94,10 +94,12 @@ for cat, participants in categories.items():
 
         if selected_name != "--- Sélectionnez ---":
             selections.append(selected_name)
+            # Retirer le joueur choisi pour ne pas l'afficher dans la prochaine sélection
             remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
+            # Affichage de la photo à côté
             p_img_name = next((p["img"] for p in participants if p["name"] == selected_name), "defqult.jpg")
-            p_img_path = f"Assets/{p_img_name}"
+            p_img_path = f"Assets/{p_img_name}"  # chemin exact
             col1, col2 = st.columns([1, 5])
             with col1:
                 st.image(p_img_path, width=80)
@@ -113,6 +115,7 @@ def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
+    # Vérifier si le téléphone a déjà voté
     if not df.empty:
         if "Téléphone" in df.columns and tel in df["Téléphone"].values:
             return False
@@ -127,7 +130,7 @@ def save_vote(nom, tel, media, votes):
     return True
 
 # ---------------------------------------------------
-# BOUTON ENVOI VOTE + PAGE DE CONFIRMATION AVEC LOGO + RÉSULTATS
+# BOUTON ENVOI VOTE + PAGE DE CONFIRMATION AVEC EMOJI BALON + LOGO + RÉSULTATS
 # ---------------------------------------------------
 if st.button("✅ Envoyer mon vote"):
 
@@ -140,12 +143,11 @@ if st.button("✅ Envoyer mon vote"):
     else:
         ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
         if ok:
-            # 🎉 Affichage festif avec logo
-            st.image("Assets/logo.PNG", width=150)
-            st.image("Assets/logo.PNG", width=150)
-            st.image("Assets/logo.PNG", width=150)
+            # 🎉 Effet "ballons de foot" avec emojis
+            st.markdown("⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽", unsafe_allow_html=True)
 
-            # Page de confirmation
+            # Page de confirmation avec logo
+            st.image("Assets/logo.PNG", width=200)
             st.markdown("**✅ Vote enregistré ! Merci pour votre participation !**")
 
             # Affichage immédiat des résultats
