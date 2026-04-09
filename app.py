@@ -18,6 +18,20 @@ def get_img(filename):
 DEFAULT_IMG = "default.jpg"
 
 # -------------------------
+# CSS pour réduire la largeur des selectbox
+# -------------------------
+st.markdown(
+    """
+    <style>
+    div[data-baseweb="select"] > div {
+        max-width: 200px;  /* largeur du selectbox */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# -------------------------
 # CATEGORIES
 # -------------------------
 categories = {
@@ -88,18 +102,16 @@ for cat, participants in categories.items():
     for i in range(1, max_choices[cat] + 1):
         options = [p["name"] for p in participants if p["name"] not in selections]
 
-        # --- COLONNES (PC) / Responsive mobile automatique ---
         col1, col2 = st.columns([4, 1], gap="small")
         with col1:
             choice = st.selectbox(f"{cat} - Choix #{i}", ["-- Choisir --"] + options, key=f"{cat}_{i}")
-
         with col2:
             if choice != "-- Choisir --":
                 for p in participants:
                     if p["name"] == choice:
                         img_path = get_img(p["img"])
                         if os.path.exists(img_path):
-                            st.image(img_path, width=40)
+                            st.image(img_path, width=50)
                         else:
                             st.image(get_img(DEFAULT_IMG), width=50)
 
