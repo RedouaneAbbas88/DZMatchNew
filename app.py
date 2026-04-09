@@ -4,27 +4,17 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 
-# ---------------------------------------------------
-# CONFIG STREAMLIT
-# ---------------------------------------------------
 st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ---------------------------------------------------
-# FONCTION POUR CHARGER IMAGE
-# ---------------------------------------------------
+# ----------------- Images -----------------
 def get_img(filename):
     path = os.path.join(BASE_DIR, "Assets", filename)
-    if os.path.exists(path):
-        return path
-    else:
-        return os.path.join(BASE_DIR, "Assets", "default.jpg")
+    return path if os.path.exists(path) else os.path.join(BASE_DIR, "Assets", "default.jpg")
 
-# ---------------------------------------------------
-# CATEGORIES AVEC PHOTOS
-# ---------------------------------------------------
+# ----------------- Données -----------------
 categories = {
     "Meilleur joueur": [
         {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
@@ -61,28 +51,22 @@ categories = {
     ]
 }
 
-max_choices = {cat: 5 for cat in categories}  # TOP 5
+max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
-# ---------------------------------------------------
-# GOOGLE SHEETS
-# ---------------------------------------------------
+# ----------------- Google Sheets -----------------
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
-# ---------------------------------------------------
-# INFOS VOTANT
-# ---------------------------------------------------
+# ----------------- Infos votant -----------------
 nom = st.text_input("📝 Nom et prénom")
 tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
-# ---------------------------------------------------
-# VOTE PAR CARTES
-# ---------------------------------------------------
+# ----------------- Vote -----------------
 vote_data = {}
 
 for cat, items in categories.items():
@@ -92,13 +76,20 @@ for cat, items in categories.items():
 
     for rank in range(1, max_choices[cat]+1):
         st.markdown(f"**Choix #{rank} :**")
-        cols = st.columns(min(len(remaining_items), 4))  # max 4 cartes par ligne
+
+        # Créer colonnes flexibles
+        cols = st.columns(2)  # 2 colonnes par ligne
 
         selected_item = None
         for idx, item in enumerate(remaining_items):
-            with cols[idx % 4]:  # répartir les cartes
-                st.image(get_img(item["img"]), width=80)
-                st.write(item["name"])
+            col = cols[idx % 2]  # 2 cartes par ligne
+            with col:
+                st.markdown(f"""
+                <div style='display:flex; align-items:center; margin-bottom:10px;'>
+                    <img src='{get_img(item["img"])}' width='50' style='margin-right:10px; border-radius:5px;'/>
+                    <span>{item["name"]}</span>
+                </div>
+                """, unsafe_allow_html=True)
                 if st.button(f"Choisir", key=f"{cat}_{rank}_{item['name']}"):
                     selected_item = item
 
@@ -108,9 +99,7 @@ for cat, items in categories.items():
 
     vote_data[cat] = selections
 
-# ---------------------------------------------------
-# ENREGISTRER LE VOTE
-# ---------------------------------------------------
+# ----------------- Sauvegarde -----------------
 def save_vote(nom, tel, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
@@ -130,9 +119,7 @@ def save_vote(nom, tel, media, votes):
         sheet.append_row(r)
     return True
 
-# ---------------------------------------------------
-# BOUTON ENVOI VOTE
-# ---------------------------------------------------
+# ----------------- Bouton vote -----------------
 if st.button("✅ Envoyer mon vote"):
     if not nom.strip():
         st.error("⚠️ Entrez votre nom")
@@ -147,9 +134,7 @@ if st.button("✅ Envoyer mon vote"):
         else:
             st.error("⚠️ Vous avez déjà voté")
 
-# ---------------------------------------------------
-# RESULTATS
-# ---------------------------------------------------
+# ----------------- Résultats -----------------
 st.header("📊 Classements")
 data = sheet.get_all_records()
 if data:
