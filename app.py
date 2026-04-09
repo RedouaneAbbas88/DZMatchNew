@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from PIL import Image
 
 # ---------------------------------------------------
 # CONFIG STREAMLIT
@@ -11,46 +10,30 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# IMAGES PAR DEFAUT
+# IMAGES PAR DÉFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/default.jpg"  # image par défaut pour les candidats sans photo
+DEFAULT_IMG = "Assets/default.jpg"
 
 # ---------------------------------------------------
 # DONNÉES CATEGORIES AVEC PHOTOS LOCALES
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
-        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
-        {"name": "Abderrahmane Meziane (CRB)", "img": "defqult.jpg"},
-        {"name": "Ibrahim Dib (CSC)", "img": "defqult.jpg"},
-        {"name": "Salim Boukhenchouch (USMA)", "img": "defqult.jpg"},
-        {"name": "Larbi Tabti (MCA)", "img": "defqult.jpg"},
-        {"name": "Mehdi Boudjamaa (JSK)", "img": "defqult.jpg"}
+        {"name": "Adel Boulbina (PAC)", "img": "Assets/boulbina.jpg"},
+        {"name": "Aymen Mahious (CRB)", "img": "Assets/mahious.jpg"},
+        {"name": "Abderrahmane Meziane (CRB)", "img": DEFAULT_IMG},
+        {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
+        {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
+        {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
+        {"name": "Mehdi Boudjamaa (JSK)", "img": DEFAULT_IMG}
     ],
     "Meilleur gardien": [
-        {"name": "Oussama Benbout (USMA)", "img": "defqult.jpg"},
-        {"name": "Zakaria Bouhalfaya (CSC)", "img": "defqult.jpg"},
-        {"name": "Abderrahmane Medjadel (ASO)", "img": "defqult.jpg"},
-        {"name": "Tarek Boussder (ESS)", "img": "defqult.jpg"},
-        {"name": "Abdelkader Salhi (MCEB)", "img": "defqult.jpg"},
-        {"name": "Moustapha Zeghba (CRB)", "img": "defqult.jpg"}
-    ],
-    "Meilleur entraîneur": [
-        {"name": "Khaled Benyahia (MCA)", "img": "defqult.jpg"},
-        {"name": "Joseph Zinbauer (JSK)", "img": "defqult.jpg"},
-        {"name": "Sead Ramovic (CRB)", "img": "defqult.jpg"},
-        {"name": "Khereddine Madoui (CSC)", "img": "defqult.jpg"},
-        {"name": "Bilal Dziri (PAC)", "img": "defqult.jpg"}
-    ],
-    "Meilleur club": [
-        {"name": "MCA", "img": "defqult.jpg"},
-        {"name": "USMA", "img": "defqult.jpg"},
-        {"name": "CSC", "img": "defqult.jpg"},
-        {"name": "CRB", "img": "defqult.jpg"},
-        {"name": "JSK", "img": "defqult.jpg"},
-        {"name": "PAC", "img": "defqult.jpg"},
-        {"name": "ESS", "img": "defqult.jpg"}
+        {"name": "Oussama Benbout (USMA)", "img": DEFAULT_IMG},
+        {"name": "Zakaria Bouhalfaya (CSC)", "img": DEFAULT_IMG},
+        {"name": "Abderrahmane Medjadel (ASO)", "img": DEFAULT_IMG},
+        {"name": "Tarek Boussder (ESS)", "img": DEFAULT_IMG},
+        {"name": "Abdelkader Salhi (MCEB)", "img": DEFAULT_IMG},
+        {"name": "Moustapha Zeghba (CRB)", "img": DEFAULT_IMG}
     ]
 }
 
@@ -69,14 +52,14 @@ sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").works
 # INFOS VOTANT
 # ---------------------------------------------------
 nom = st.text_input("📝 Nom et prénom")
-tel = st.text_input("📞 Téléphone ")
+tel = st.text_input("📞 Téléphone")
 media = st.text_input("📸 Média")
 
 # ---------------------------------------------------
 # VALIDATION NUMÉRO TÉLÉPHONE
 # ---------------------------------------------------
 def is_valid_phone(t):
-    return t.isdigit() and len(t) == 9
+    return t.isdigit() and len(t) == 9  # Algérie = 9 chiffres
 
 # ---------------------------------------------------
 # VOTE PAR CLASSE AVEC AFFICHAGE PHOTO
@@ -97,9 +80,8 @@ for cat, participants in categories.items():
             selections.append(selected_name)
             remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
-            # CHEMIN IMAGE CORRECT
-            p_img_path = "Assets/" + next((p["img"] for p in participants if p["name"] == selected_name), "default.jpg")
-
+            # Affichage de la photo à côté
+            p_img_path = next((p["img"] for p in participants if p["name"] == selected_name), DEFAULT_IMG)
             col1, col2 = st.columns([1, 5])
             with col1:
                 st.image(p_img_path, width=80)
@@ -142,23 +124,23 @@ if st.button("✅ Envoyer mon vote"):
     else:
         ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
         if ok:
-            st.success("✅ Vote enregistré !")
+            # 🎉 Affichage direct de la page de confirmation
+            st.markdown("### ⚽⚽⚽ Vote enregistré avec succès ! ⚽⚽⚽")
             st.balloons()
             st.image("Assets/logo.PNG", width=200)
-            st.markdown("**Merci pour votre participation !**")
+            st.markdown("**Merci pour votre participation ! Voici les résultats actuels :**")
 
-            show_results = st.checkbox("📊 Voir les résultats maintenant ?")
-            if show_results:
-                data = sheet.get_all_records()
-                if data:
-                    df = pd.DataFrame(data)
-                    df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
+            # Affichage résultats directement
+            data = sheet.get_all_records()
+            if data:
+                df = pd.DataFrame(data)
+                df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
-                    for cat in categories:
-                        st.subheader(cat)
-                        df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
-                        df_cat = df_cat.sort_values(by="Points", ascending=False)
-                        df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
-                        st.dataframe(df_cat, use_container_width=True, hide_index=True)
+                for cat in categories:
+                    st.subheader(cat)
+                    df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
+                    df_cat = df_cat.sort_values(by="Points", ascending=False)
+                    df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
+                    st.dataframe(df_cat, use_container_width=True, hide_index=True)
         else:
             st.error("⚠️ Ce numéro de téléphone a déjà voté")
