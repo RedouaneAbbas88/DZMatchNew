@@ -10,41 +10,46 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# DONNÉES CATEGORIES AVEC PHOTOS LOCALES
+# IMAGE PAR DÉFAUT POUR CANDIDATS NON DISPONIBLES
+# ---------------------------------------------------
+DEFAULT_IMG = "Assets/default.jpg"  # Crée un fichier default.jpg pour les autres candidats
+
+# ---------------------------------------------------
+# DONNÉES CATEGORIES AVEC PHOTOS
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Adel Boulbina (PAC)", "img": "Assets/candidates/boulbina.jpg"},
-        {"name": "Aymen Mahious (CRB)", "img": "Assets/candidates/mahious.jpg"},
-        {"name": "Abderrahmane Meziane (CRB)", "img": "Assets/candidates/meziane.jpg"},
-        {"name": "Ibrahim Dib (CSC)", "img": "Assets/candidates/dib.jpg"},
-        {"name": "Salim Boukhenchouch (USMA)", "img": "Assets/candidates/boukhenchouch.jpg"},
-        {"name": "Larbi Tabti (MCA)", "img": "Assets/candidates/tabti.jpg"},
-        {"name": "Mehdi Boudjamaa (JSK)", "img": "Assets/candidates/boudjamaa.jpg"}
+        {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
+        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
+        {"name": "Abderrahmane Meziane (CRB)", "img": test_IMG},
+        {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
+        {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
+        {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
+        {"name": "Mehdi Boudjamaa (JSK)", "img": DEFAULT_IMG}
     ],
     "Meilleur gardien": [
-        {"name": "Oussama Benbout (USMA)", "img": "Assets/candidates/benbout.jpg"},
-        {"name": "Zakaria Bouhalfaya (CSC)", "img": "Assets/candidates/bouhalfaya.jpg"},
-        {"name": "Abderrahmane Medjadel (ASO)", "img": "Assets/candidates/medjadel.jpg"},
-        {"name": "Tarek Boussder (ESS)", "img": "Assets/candidates/boussder.jpg"},
-        {"name": "Abdelkader Salhi (MCEB)", "img": "Assets/candidates/salhi.jpg"},
-        {"name": "Moustapha Zeghba (CRB)", "img": "Assets/candidates/zeghba.jpg"}
+        {"name": "Oussama Benbout (USMA)", "img": DEFAULT_IMG},
+        {"name": "Zakaria Bouhalfaya (CSC)", "img": DEFAULT_IMG},
+        {"name": "Abderrahmane Medjadel (ASO)", "img": DEFAULT_IMG},
+        {"name": "Tarek Boussder (ESS)", "img": DEFAULT_IMG},
+        {"name": "Abdelkader Salhi (MCEB)", "img": DEFAULT_IMG},
+        {"name": "Moustapha Zeghba (CRB)", "img": DEFAULT_IMG}
     ],
     "Meilleur entraîneur": [
-        {"name": "Khaled Benyahia (MCA)", "img": "Assets/candidates/benyahia.jpg"},
-        {"name": "Joseph Zinbauer (JSK)", "img": "Assets/candidates/zinbauer.jpg"},
-        {"name": "Sead Ramovic (CRB)", "img": "Assets/candidates/ramovic.jpg"},
-        {"name": "Khereddine Madoui (CSC)", "img": "Assets/candidates/madoui.jpg"},
-        {"name": "Bilal Dziri (PAC)", "img": "Assets/candidates/dziri.jpg"}
+        {"name": "Khaled Benyahia (MCA)", "img": DEFAULT_IMG},
+        {"name": "Joseph Zinbauer (JSK)", "img": DEFAULT_IMG},
+        {"name": "Sead Ramovic (CRB)", "img": DEFAULT_IMG},
+        {"name": "Khereddine Madoui (CSC)", "img": DEFAULT_IMG},
+        {"name": "Bilal Dziri (PAC)", "img": DEFAULT_IMG}
     ],
     "Meilleur club": [
-        {"name": "MCA", "img": "Assets/candidates/mca.jpg"},
-        {"name": "USMA", "img": "Assets/candidates/usma.jpg"},
-        {"name": "CSC", "img": "Assets/candidates/csc.jpg"},
-        {"name": "CRB", "img": "Assets/candidates/crb.jpg"},
-        {"name": "JSK", "img": "Assets/candidates/jsk.jpg"},
-        {"name": "PAC", "img": "Assets/candidates/pac.jpg"},
-        {"name": "ESS", "img": "Assets/candidates/ess.jpg"}
+        {"name": "MCA", "img": DEFAULT_IMG},
+        {"name": "USMA", "img": DEFAULT_IMG},
+        {"name": "CSC", "img": DEFAULT_IMG},
+        {"name": "CRB", "img": DEFAULT_IMG},
+        {"name": "JSK", "img": DEFAULT_IMG},
+        {"name": "PAC", "img": DEFAULT_IMG},
+        {"name": "ESS", "img": DEFAULT_IMG}
     ]
 }
 
@@ -89,9 +94,8 @@ for cat, participants in categories.items():
 
         # Affichage de la photo à côté
         if selected_name:
-            p_img = next((p["img"] for p in remaining if p["name"] == selected_name), None)
-            if p_img:
-                col2.image(p_img, width=100)
+            p_img = next((p["img"] for p in remaining if p["name"] == selected_name), DEFAULT_IMG)
+            col2.image(p_img, width=100)
             selections.append(selected_name)
             # Retirer le candidat choisi
             remaining = [p for p in remaining if p["name"] != selected_name]
