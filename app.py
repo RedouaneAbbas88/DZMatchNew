@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import re
+import os
 
 # ---------------------------------------------------
 # CONFIG STREAMLIT
@@ -10,17 +12,17 @@ st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
 
 # ---------------------------------------------------
-# IMAGES PAR DEFAUT
+# IMAGE PAR DÉFAUT
 # ---------------------------------------------------
-DEFAULT_IMG = "Assets/default.jpg"  # placeholder pour candidats sans photo
+DEFAULT_IMG = "Assets/default.jpg"  # Image par défaut si la photo n'existe pas
 
 # ---------------------------------------------------
-# DONNÉES CATEGORIES
+# CATEGORIES AVEC PHOTOS (seulement 2 photos réelles pour test)
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Adel Boulbina (PAC)", "img": "Assets/boulbina.jpg"},
-        {"name": "Aymen Mahious (CRB)", "img": "Assets/mahious.jpg"},
+        {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
+        {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
         {"name": "Abderrahmane Meziane (CRB)", "img": DEFAULT_IMG},
         {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
         {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
@@ -29,59 +31,44 @@ categories = {
     ],
     "Meilleur gardien": [
         {"name": "Oussama Benbout (USMA)", "img": DEFAULT_IMG},
-        {"name": "Zakaria Bouhalfaya (CSC)", "img": DEFAULT_IMG},
-        {"name": "Abderrahmane Medjadel (ASO)", "img": DEFAULT_IMG},
-        {"name": "Tarek Boussder (ESS)", "img": DEFAULT_IMG},
-        {"name": "Abdelkader Salhi (MCEB)", "img": DEFAULT_IMG},
-        {"name": "Moustapha Zeghba (CRB)", "img": DEFAULT_IMG}
+        {"name": "Zakaria Bouhalfaya (CSC)", "img": DEFAULT_IMG}
     ],
     "Meilleur entraîneur": [
         {"name": "Khaled Benyahia (MCA)", "img": DEFAULT_IMG},
-        {"name": "Joseph Zinbauer (JSK)", "img": DEFAULT_IMG},
-        {"name": "Sead Ramovic (CRB)", "img": DEFAULT_IMG},
-        {"name": "Khereddine Madoui (CSC)", "img": DEFAULT_IMG},
-        {"name": "Bilal Dziri (PAC)", "img": DEFAULT_IMG}
+        {"name": "Joseph Zinbauer (JSK)", "img": DEFAULT_IMG}
     ],
     "Meilleur club": [
         {"name": "MCA", "img": DEFAULT_IMG},
-        {"name": "USMA", "img": DEFAULT_IMG},
-        {"name": "CSC", "img": DEFAULT_IMG},
-        {"name": "CRB", "img": DEFAULT_IMG},
-        {"name": "JSK", "img": DEFAULT_IMG},
-        {"name": "PAC", "img": DEFAULT_IMG},
-        {"name": "ESS", "img": DEFAULT_IMG}
+        {"name": "USMA", "img": DEFAULT_IMG}
     ]
 }
 
-max_choices = {cat: 5 for cat in categories}
+max_choices = {cat: 5 for cat in categories}  # max 5 choix par catégorie
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
 # GOOGLE SHEETS
 # ---------------------------------------------------
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
-client = gspread.authorize(creds)
-sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
+          "https://www.googleapis.com/auth/drive"]
+try:
+    creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
+except Exception as e:
+    st.error("❌ Impossible de se connecter à Google Sheet. Vérifiez la clé et les permissions.")
+    st.stop()
 
 # ---------------------------------------------------
 # INFOS VOTANT
 # ---------------------------------------------------
 nom = st.text_input("📝 Nom et prénom")
-tel = st.text_input("📞 Téléphone")
+tel = st.text_input("📞 Numéro de téléphone (9 chiffres)")
 media = st.text_input("📸 Média")
 
-# ---------------------------------------------------
-# VALIDATION TELEPHONE ALGÉRIE
-# ---------------------------------------------------
-def validate_phone(phone):
-    phone_clean = phone.replace(" ", "").replace("-", "")
-    if phone_clean.startswith("0") and len(phone_clean) == 10 and phone_clean.isdigit():
-        return True, ""
-    elif phone_clean.startswith("+213") and len(phone_clean) == 13 and phone_clean[1:].isdigit():
-        return True, ""
-    else:
-        return False, "⚠️ Numéro invalide : doit être 0xxxxxxxxx ou +213xxxxxxxxx"
+# Validation téléphone
+def is_valid_phone(number):
+    return bool(re.fullmatch(r"\d{9}", number.strip()))
 
 # ---------------------------------------------------
 # VOTE PAR CLASSE
@@ -95,27 +82,21 @@ for cat, participants in categories.items():
 
     for i in range(1, max_choices[cat]+1):
         st.markdown(f"**Choix #{i} :**")
-        cols = st.columns([3, 7])
 
-        # Ajouter une option vide au début pour que selectbox commence vide
-        select_options = [""] + [p["name"] for p in remaining_players]
-        selected_player_name = st.selectbox(
-            f"Choisissez le joueur pour Choix #{i}",
-            options=select_options,
-            key=f"{cat}_{i}"
-        )
+        # Dropdown avec noms seulement, initialement vide
+        options = [""] + [p["name"] for p in remaining_players]
+        selected_name = st.selectbox(f"Classe #{i} pour {cat}", options, key=f"{cat}_{i}")
 
-        if selected_player_name:
-            # Afficher image et nom seulement si un choix est fait
-            p_img = next((p["img"] for p in remaining_players if p["name"] == selected_player_name), DEFAULT_IMG)
-            with cols[0]:
-                st.image(p_img, width=80)
-            with cols[1]:
-                st.write(selected_player_name)
+        if selected_name and selected_name != "":
+            selections.append(selected_name)
+            # Retire le joueur sélectionné pour ne plus l'afficher
+            remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
-            selections.append(selected_player_name)
-            # Retire le joueur sélectionné
-            remaining_players = [p for p in remaining_players if p["name"] != selected_player_name]
+            # Affiche la photo du joueur choisi
+            p_img = next((p["img"] for p in participants if p["name"] == selected_name), DEFAULT_IMG)
+            if not os.path.isfile(p_img):
+                p_img = DEFAULT_IMG
+            st.image(p_img, width=100)
 
     vote_data[cat] = selections
 
@@ -127,10 +108,8 @@ def save_vote(nom, tel, media, votes):
     df = pd.DataFrame(data)
 
     if not df.empty:
-        if "Nom" in df.columns and nom in df["Nom"].values:
-            return False
         if "Téléphone" in df.columns and tel in df["Téléphone"].values:
-            return False
+            return False  # déjà voté pour ce numéro
 
     rows = []
     for cat, selections in votes.items():
@@ -147,26 +126,23 @@ def save_vote(nom, tel, media, votes):
 if st.button("✅ Envoyer mon vote"):
     if not nom.strip():
         st.error("⚠️ Entrez votre nom")
-    elif not tel.strip():
-        st.error("⚠️ Entrez votre téléphone")
+    elif not tel.strip() or not is_valid_phone(tel):
+        st.error("⚠️ Numéro de téléphone invalide. Doit contenir 9 chiffres.")
+    elif not media.strip():
+        st.error("⚠️ Entrez votre média")
     else:
-        is_valid, msg_error = validate_phone(tel)
-        if not is_valid:
-            st.error(msg_error)
-        elif not media.strip():
-            st.error("⚠️ Entrez votre média")
+        ok = save_vote(nom, tel, media, vote_data)
+        if ok:
+            st.success("✅ Vote enregistré !")
         else:
-            ok = save_vote(nom, tel, media, vote_data)
-            if ok:
-                st.success("✅ Vote enregistré !")
-            else:
-                st.error("⚠️ Vous avez déjà voté avec ce nom ou ce numéro de téléphone")
+            st.error("⚠️ Ce numéro de téléphone a déjà voté.")
 
 # ---------------------------------------------------
 # RESULTATS
 # ---------------------------------------------------
 st.header("📊 Classements")
 data = sheet.get_all_records()
+
 if data:
     df = pd.DataFrame(data)
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
