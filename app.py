@@ -21,7 +21,7 @@ categories = {
     "Meilleur joueur": [
         {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
         {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
-        {"name": "Abderrahmane Meziane (CRB)", "img": test_IMG},
+        {"name": "Abderrahmane Meziane (CRB)", "img": test.jpg},
         {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
         {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
         {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
