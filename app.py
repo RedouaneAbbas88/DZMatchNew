@@ -144,7 +144,7 @@ if st.button("✅ Envoyer mon vote"):
         if ok:
             st.success("✅ Vote enregistré !")
             st.balloons()
-            st.image("Assets/logo.png", width=200)
+            st.image("Assets/logo.PNG", width=200)
             st.markdown("**Merci pour votre participation !**")
 
             show_results = st.checkbox("📊 Voir les résultats maintenant ?")
