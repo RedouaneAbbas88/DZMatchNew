@@ -22,35 +22,35 @@ categories = {
     "Meilleur joueur": [
         {"name": "Adel Boulbina (PAC)", "img": "boulbina.jpg"},
         {"name": "Aymen Mahious (CRB)", "img": "mahious.jpg"},
-        {"name": "Abderrahmane Meziane (CRB)", "img": DEFAULT_IMG},
-        {"name": "Ibrahim Dib (CSC)", "img": DEFAULT_IMG},
-        {"name": "Salim Boukhenchouch (USMA)", "img": DEFAULT_IMG},
-        {"name": "Larbi Tabti (MCA)", "img": DEFAULT_IMG},
-        {"name": "Mehdi Boudjamaa (JSK)", "img": DEFAULT_IMG}
+        {"name": "Abderrahmane Meziane (CRB)", "img": "defqult.jpg"},
+        {"name": "Ibrahim Dib (CSC)", "img": "defqult.jpg"},
+        {"name": "Salim Boukhenchouch (USMA)", "img": "defqult.jpg"},
+        {"name": "Larbi Tabti (MCA)", "img": "defqult.jpg"},
+        {"name": "Mehdi Boudjamaa (JSK)", "img": "defqult.jpg"}
     ],
     "Meilleur gardien": [
-        {"name": "Oussama Benbout (USMA)", "img": DEFAULT_IMG},
-        {"name": "Zakaria Bouhalfaya (CSC)", "img": DEFAULT_IMG},
-        {"name": "Abderrahmane Medjadel (ASO)", "img": DEFAULT_IMG},
-        {"name": "Tarek Boussder (ESS)", "img": DEFAULT_IMG},
-        {"name": "Abdelkader Salhi (MCEB)", "img": DEFAULT_IMG},
-        {"name": "Moustapha Zeghba (CRB)", "img": DEFAULT_IMG}
+        {"name": "Oussama Benbout (USMA)", "img": "defqult.jpg"},
+        {"name": "Zakaria Bouhalfaya (CSC)", "img": "defqult.jpg"},
+        {"name": "Abderrahmane Medjadel (ASO)", "img": "defqult.jpg"},
+        {"name": "Tarek Boussder (ESS)", "img": "defqult.jpg"},
+        {"name": "Abdelkader Salhi (MCEB)", "img": "defqult.jpg"},
+        {"name": "Moustapha Zeghba (CRB)", "img": "defqult.jpg"}
     ],
     "Meilleur entraîneur": [
-        {"name": "Khaled Benyahia (MCA)", "img": DEFAULT_IMG},
-        {"name": "Joseph Zinbauer (JSK)", "img": DEFAULT_IMG},
-        {"name": "Sead Ramovic (CRB)", "img": DEFAULT_IMG},
-        {"name": "Khereddine Madoui (CSC)", "img": DEFAULT_IMG},
-        {"name": "Bilal Dziri (PAC)", "img": DEFAULT_IMG}
+        {"name": "Khaled Benyahia (MCA)", "img": "defqult.jpg"},
+        {"name": "Joseph Zinbauer (JSK)", "img": "defqult.jpg"},
+        {"name": "Sead Ramovic (CRB)", "img": "defqult.jpg"},
+        {"name": "Khereddine Madoui (CSC)", "img": "defqult.jpg"},
+        {"name": "Bilal Dziri (PAC)", "img": "defqult.jpg"}
     ],
     "Meilleur club": [
-        {"name": "MCA", "img": DEFAULT_IMG},
-        {"name": "USMA", "img": DEFAULT_IMG},
-        {"name": "CSC", "img": DEFAULT_IMG},
-        {"name": "CRB", "img": DEFAULT_IMG},
-        {"name": "JSK", "img": DEFAULT_IMG},
-        {"name": "PAC", "img": DEFAULT_IMG},
-        {"name": "ESS", "img": DEFAULT_IMG}
+        {"name": "MCA", "img": "defqult.jpg"},
+        {"name": "USMA", "img": "defqult.jpg"},
+        {"name": "CSC", "img": "defqult.jpg"},
+        {"name": "CRB", "img": "defqult.jpg"},
+        {"name": "JSK", "img": "defqult.jpg"},
+        {"name": "PAC", "img": "defqult.jpg"},
+        {"name": "ESS", "img": "defqult.jpg"}
     ]
 }
 
