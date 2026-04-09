@@ -76,7 +76,7 @@ media = st.text_input("📸 Média")
 # VALIDATION NUMÉRO TÉLÉPHONE
 # ---------------------------------------------------
 def is_valid_phone(t):
-    return t.isdigit() and len(t) == 10
+    return t.isdigit() and len(t) == 9
 
 # ---------------------------------------------------
 # VOTE PAR CLASSE AVEC AFFICHAGE PHOTO
@@ -95,11 +95,11 @@ for cat, participants in categories.items():
 
         if selected_name != "--- Sélectionnez ---":
             selections.append(selected_name)
-            # Retirer le joueur choisi pour ne pas l'afficher dans la prochaine sélection
             remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
-            # Affichage de la photo à côté
-            p_img_path = next((p["img"] for p in participants if p["name"] == selected_name), DEFAULT_IMG)
+            # CHEMIN IMAGE CORRECT
+            p_img_path = "Assets/" + next((p["img"] for p in participants if p["name"] == selected_name), "default.jpg")
+
             col1, col2 = st.columns([1, 5])
             with col1:
                 st.image(p_img_path, width=80)
