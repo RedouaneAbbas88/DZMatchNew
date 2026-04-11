@@ -26,28 +26,26 @@ DEFAULT_IMG = "Assets/defqult.jpg"
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Ferhat (mca)", "img": "boulbina.jpg"},
-        {"name": "khacef (crb)", "img": "mahious.jpg"},
-        {"name": "ghacha (usma)", "img": "defqult.jpg"},
-        {"name": "belaid (jsk)", "img": "defqult.jpg"},
-        {"name": "zerrouki (ess)", "img": "defqult.jpg"},
-        {"name": "abada (aso/usma)", "img": "defqult.jpg"}
+        {"name": "Zineddine Ferhat (MCA)", "img": "boulbina.jpg"},
+        {"name": "Mohamed Khacef(CRB)", "img": "mahious.jpg"},
+        {"name": "Houssem Ghacha (USMA)", "img": "defqult.jpg"},
+        {"name": "Zineddine Belaid (JSK)", "img": "defqult.jpg"},
+        {"name": "Merouane Zerrouki (ESS)", "img": "defqult.jpg"},
+        {"name": "Achraf Abada (ASO/USMA)", "img": "defqult.jpg"}
     ],
     "Meilleur gardien": [
-        {"name": "salhi (jss)", "img": "defqult.jpg"},
-        {"name": "benbout (usma)", "img": "defqult.jpg"},
-        {"name": "guendouz (mca)", "img": "defqult.jpg"},
-        {"name": "bouhalfaia (csc)", "img": "defqult.jpg"},
-        {"name": "chaal (crb)", "img": "defqult.jpg"},
-        {"name": "Ghaya merbah (jsk)", "img": "defqult.jpg"}
+        {"name": "Abdelkader Salhi (JSS)", "img": "defqult.jpg"},
+        {"name": "Oussama Benbout (USMA)", "img": "defqult.jpg"},
+        {"name": "Alexis Guendouz (MCA)", "img": "defqult.jpg"},
+        {"name": "Farid Chaal (CRB)", "img": "defqult.jpg"},
+        {"name": "Ghaya Merbah (JSK)", "img": "defqult.jpg"}
     ],
     "Meilleur entraîneur": [
-        {"name": "Zegoud (Étoile de Ben Aknoun)", "img": "defqult.jpg"},
+        {"name": "Mounir Zegdoud (Étoile de Ben Aknoun)", "img": "defqult.jpg"},
         {"name": "Lotfi Amrouche (Akbou / Sétif)", "img": "defqult.jpg"},
-        {"name": "Ramović (CR Belouizdad)", "img": "defqult.jpg"},
-        {"name": "Belaïd (Olympique Akbou)", "img": "defqult.jpg"},
-        {"name": "Amrani (JS Saoura)", "img": "defqult.jpg"},
-        {"name": "Chérif El Ouazzani (MC Oran)", "img": "defqult.jpg"}
+        {"name": "Sead Ramović (CRB)", "img": "defqult.jpg"},
+        {"name": "Abdelkader Amrani (JSS)", "img": "defqult.jpg"},
+        {"name": "Chérif El Ouazzani (MCO)", "img": "defqult.jpg"}
     ],
     "Meilleur club": [
         {"name": "MCA", "img": "defqult.jpg"},
