@@ -4,7 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ---------------------------------------------------
-# CONFIG STREAMLIT
+# CONFIG
 # ---------------------------------------------------
 st.set_page_config(page_title="DZBEST 2025", layout="wide")
 st.title("🏆 DZBEST 2025")
@@ -16,7 +16,7 @@ if "page" not in st.session_state:
     st.session_state.page = "vote"
 
 # ---------------------------------------------------
-# DONNÉES
+# DATA
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
@@ -35,20 +35,18 @@ categories = {
         {"name": "Ghaya Merbah (JSK)", "img": "defqult.jpg"}
     ],
     "Meilleur entraîneur": [
-        {"name": "Mounir Zegdoud (Étoile de Ben Aknoun)", "img": "defqult.jpg"},
-        {"name": "Lotfi Amrouche (Akbou / Sétif)", "img": "defqult.jpg"},
-        {"name": "Sead Ramović (CRB)", "img": "defqult.jpg"},
-        {"name": "Abdelkader Amrani (JSS)", "img": "defqult.jpg"},
-        {"name": "Chérif El Ouazzani (MCO)", "img": "defqult.jpg"}
+        {"name": "Mounir Zegdoud", "img": "defqult.jpg"},
+        {"name": "Lotfi Amrouche", "img": "defqult.jpg"},
+        {"name": "Sead Ramović", "img": "defqult.jpg"},
+        {"name": "Abdelkader Amrani", "img": "defqult.jpg"},
+        {"name": "Chérif El Ouazzani", "img": "defqult.jpg"}
     ],
     "Meilleur club": [
         {"name": "MCA", "img": "defqult.jpg"},
         {"name": "USMA", "img": "defqult.jpg"},
-        {"name": "MCO", "img": "defqult.jpg"},
         {"name": "CRB", "img": "defqult.jpg"},
         {"name": "JSK", "img": "defqult.jpg"},
-        {"name": "O. Akbou", "img": "defqult.jpg"},
-        {"name": "ESBA", "img": "defqult.jpg"}
+        {"name": "MCO", "img": "defqult.jpg"}
     ]
 }
 
@@ -58,7 +56,7 @@ points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 # ---------------------------------------------------
 # GOOGLE SHEETS
 # ---------------------------------------------------
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
@@ -68,60 +66,46 @@ sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").works
 # ---------------------------------------------------
 if st.session_state.page == "vote":
 
-    nom = st.text_input("📝 Nom et prénom")
-    tel = st.text_input("📞 Téléphone")
-    media = st.text_input("📸 Média")
-
-    def is_valid_phone(t):
-        return t.isdigit() and len(t) == 9
+    nom = st.text_input("Nom et prénom")
+    tel = st.text_input("Téléphone")
+    media = st.text_input("Média")
 
     vote_data = {}
 
     for cat, participants in categories.items():
-        st.subheader(f"🏅 {cat}")
-        remaining_players = participants.copy()
+        st.subheader(cat)
+        remaining = participants.copy()
         selections = []
 
-        for i in range(1, max_choices[cat] + 1):
-            options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
-            selected = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
+        for i in range(1, 6):
+            options = ["---"] + [p["name"] for p in remaining]
+            choice = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
 
-            if selected != "--- Sélectionnez ---":
-                selections.append(selected)
-                remaining_players = [p for p in remaining_players if p["name"] != selected]
+            if choice != "---":
+                selections.append(choice)
+                remaining = [p for p in remaining if p["name"] != choice]
 
         vote_data[cat] = selections
 
-    def save_vote(nom, tel, media, votes):
+    def save_vote():
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
 
-        if not df.empty and "Téléphone" in df.columns:
-            if tel in df["Téléphone"].values:
-                return False
+        if not df.empty and tel in df["Téléphone"].values:
+            return False
 
-        rows = []
-        for cat, selections in votes.items():
-            for i, candidat in enumerate(selections, start=1):
-                rows.append([nom, tel, media, cat, candidat, i, points.get(i, 0)])
-
-        for r in rows:
-            sheet.append_row(r)
+        for cat, selections in vote_data.items():
+            for i, c in enumerate(selections, start=1):
+                sheet.append_row([nom, tel, media, cat, c, i, points[i]])
 
         return True
 
-    if st.button("✅ Envoyer mon vote"):
+    if st.button("Envoyer"):
 
-        if not nom:
-            st.error("Entrez votre nom")
-        elif not is_valid_phone(tel):
-            st.error("Numéro invalide")
-        elif not media:
-            st.error("Entrez votre média")
+        if not nom or not tel or not media:
+            st.error("Remplir tous les champs")
         else:
-            ok = save_vote(nom, tel, media, vote_data)
-
-            if ok:
+            if save_vote():
                 st.session_state.page = "results"
                 st.rerun()
             else:
@@ -132,7 +116,7 @@ if st.session_state.page == "vote":
 # ---------------------------------------------------
 if st.session_state.page == "results":
 
-    st.success("Vote enregistré !")
+    st.success("Vote enregistré")
 
     data = sheet.get_all_records()
 
@@ -140,7 +124,8 @@ if st.session_state.page == "results":
         df = pd.DataFrame(data)
         df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
-        for cat in categories:
+        for cat, participants in categories.items():
+
             st.subheader(cat)
 
             df_cat = (
@@ -149,9 +134,31 @@ if st.session_state.page == "results":
                 .sum()
                 .reset_index()
                 .sort_values(by="Points", ascending=False)
-                .head(5)
             )
 
-            df_cat.insert(0, "Classement", range(1, len(df_cat) + 1))
+            top5 = df_cat.head(5)
 
-            st.dataframe(df_cat, use_container_width=True, hide_index=True)
+            # 🏆 PODIUM
+            st.markdown("### 🥇 Podium")
+
+            podium = top5.head(3)
+            cols = st.columns(3)
+
+            for i, (_, row) in enumerate(podium.iterrows()):
+                name = row["Candidat"]
+                pts = row["Points"]
+
+                img = next((p["img"] for p in participants if p["name"] == name), "defqult.jpg")
+
+                with cols[i]:
+                    st.image(f"Assets/{img}", width=120)
+                    st.markdown(f"**#{i+1} {name}**")
+                    st.write(f"{pts} pts")
+
+            # 📊 TABLE
+            st.markdown("### Classement")
+
+            top5 = top5.copy()
+            top5.insert(0, "Rank", range(1, len(top5)+1))
+
+            st.dataframe(top5, use_container_width=True)
