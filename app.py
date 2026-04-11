@@ -35,18 +35,20 @@ categories = {
         {"name": "Ghaya Merbah (JSK)", "img": "defqult.jpg"}
     ],
     "Meilleur entraîneur": [
-        {"name": "Mounir Zegdoud", "img": "defqult.jpg"},
-        {"name": "Lotfi Amrouche", "img": "defqult.jpg"},
-        {"name": "Sead Ramović", "img": "defqult.jpg"},
-        {"name": "Abdelkader Amrani", "img": "defqult.jpg"},
-        {"name": "Chérif El Ouazzani", "img": "defqult.jpg"}
+        {"name": "Mounir Zegdoud (Étoile de Ben Aknoun)", "img": "defqult.jpg"},
+        {"name": "Lotfi Amrouche (Akbou / Sétif)", "img": "defqult.jpg"},
+        {"name": "Sead Ramović (CRB)", "img": "defqult.jpg"},
+        {"name": "Abdelkader Amrani (JSS)", "img": "defqult.jpg"},
+        {"name": "Chérif El Ouazzani (MCO)", "img": "defqult.jpg"}
     ],
     "Meilleur club": [
         {"name": "MCA", "img": "defqult.jpg"},
         {"name": "USMA", "img": "defqult.jpg"},
+        {"name": "MCO", "img": "defqult.jpg"},
         {"name": "CRB", "img": "defqult.jpg"},
         {"name": "JSK", "img": "defqult.jpg"},
-        {"name": "MCO", "img": "defqult.jpg"}
+        {"name": "O. Akbou", "img": "defqult.jpg"},
+        {"name": "ESBA", "img": "defqult.jpg"}
     ]
 }
 
@@ -66,57 +68,79 @@ sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").works
 # ---------------------------------------------------
 if st.session_state.page == "vote":
 
-    nom = st.text_input("Nom et prénom")
-    tel = st.text_input("Téléphone")
-    media = st.text_input("Média")
+    nom = st.text_input("📝 Nom et prénom")
+    tel = st.text_input("📞 Téléphone")
+    media = st.text_input("📸 Média")
+
+    def is_valid_phone(t):
+        return t.isdigit() and len(t) == 9
 
     vote_data = {}
 
     for cat, participants in categories.items():
-        st.subheader(cat)
-        remaining = participants.copy()
+        st.subheader(f"🏅 {cat}")
+        remaining_players = participants.copy()
         selections = []
 
-        for i in range(1, 6):
-            options = ["---"] + [p["name"] for p in remaining]
-            choice = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
+        for i in range(1, max_choices[cat]+1):
+            st.markdown(f"**Choix #{i} :**")
+            options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
+            selected_name = st.selectbox(f"Classe {i} - {cat}", options, key=f"{cat}_{i}")
 
-            if choice != "---":
-                selections.append(choice)
-                remaining = [p for p in remaining if p["name"] != choice]
+            if selected_name != "--- Sélectionnez ---":
+                selections.append(selected_name)
+                remaining_players = [p for p in remaining_players if p["name"] != selected_name]
+
+                p_img_name = next((p["img"] for p in participants if p["name"] == selected_name), "defqult.jpg")
+                p_img_path = f"Assets/{p_img_name}"
+
+                col1, col2 = st.columns([1, 5])
+                with col1:
+                    st.image(p_img_path, width=80)
+                with col2:
+                    st.write(selected_name)
 
         vote_data[cat] = selections
 
-    def save_vote():
+    def save_vote(nom, tel, media, votes):
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
 
-        if not df.empty and tel in df["Téléphone"].values:
-            return False
+        if not df.empty and "Téléphone" in df.columns:
+            if tel in df["Téléphone"].values:
+                return False
 
-        for cat, selections in vote_data.items():
-            for i, c in enumerate(selections, start=1):
-                sheet.append_row([nom, tel, media, cat, c, i, points[i]])
+        for cat, selections in votes.items():
+            for i, candidat in enumerate(selections, start=1):
+                sheet.append_row([nom, tel, media, cat, candidat, i, points.get(i, 0)])
 
         return True
 
-    if st.button("Envoyer"):
+    if st.button("✅ Envoyer mon vote"):
 
-        if not nom or not tel or not media:
-            st.error("Remplir tous les champs")
+        if not nom.strip():
+            st.error("⚠️ Entrez votre nom")
+        elif not is_valid_phone(tel.strip()):
+            st.error("⚠️ Numéro invalide")
+        elif not media.strip():
+            st.error("⚠️ Entrez votre média")
         else:
-            if save_vote():
+            ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
+
+            if ok:
                 st.session_state.page = "results"
                 st.rerun()
             else:
-                st.error("Vous avez déjà voté")
+                st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
 # PAGE RESULTATS
 # ---------------------------------------------------
 if st.session_state.page == "results":
 
-    st.success("Vote enregistré")
+    st.markdown("### ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
+    st.image("Assets/logo.PNG", width=200)
+    st.success("✅ Vote enregistré !")
 
     data = sheet.get_all_records()
 
@@ -126,7 +150,7 @@ if st.session_state.page == "results":
 
         for cat, participants in categories.items():
 
-            st.subheader(cat)
+            st.subheader(f"🏅 {cat}")
 
             df_cat = (
                 df[df["Categorie"] == cat]
@@ -136,7 +160,8 @@ if st.session_state.page == "results":
                 .sort_values(by="Points", ascending=False)
             )
 
-            top5 = df_cat.head(5)
+            top5 = df_cat.head(5).copy()
+            top5.insert(0, "Classement", range(1, len(top5)+1))
 
             # 🏆 PODIUM
             st.markdown("### 🥇 Podium")
@@ -153,12 +178,8 @@ if st.session_state.page == "results":
                 with cols[i]:
                     st.image(f"Assets/{img}", width=120)
                     st.markdown(f"**#{i+1} {name}**")
-                    st.write(f"{pts} pts")
+                    st.write(f"{pts} points")
 
             # 📊 TABLE
-            st.markdown("### Classement")
-
-            top5 = top5.copy()
-            top5.insert(0, "Rank", range(1, len(top5)+1))
-
-            st.dataframe(top5, use_container_width=True)
+            st.markdown("### 📊 Classement")
+            st.dataframe(top5, use_container_width=True, hide_index=True)
