@@ -42,13 +42,13 @@ categories = {
         {"name": "Chérif El Ouazzani (MCO)", "img": "defqult.jpg"}
     ],
     "Meilleur club": [
-        {"name": "MCA", "img": "defqult.jpg"},
-        {"name": "USMA", "img": "defqult.jpg"},
-        {"name": "MCO", "img": "defqult.jpg"},
-        {"name": "CRB", "img": "defqult.jpg"},
-        {"name": "JSK", "img": "defqult.jpg"},
-        {"name": "O. Akbou", "img": "defqult.jpg"},
-        {"name": "ESBA", "img": "defqult.jpg"}
+        {"name": "MCA", "img": "MCA.jpg"},
+        {"name": "USMA", "img": "USMA.jpg"},
+        {"name": "MCO", "img": "MCO.jpg"},
+        {"name": "CRB", "img": "CRB.jpg"},
+        {"name": "JSK", "img": "JSK.jpg"},
+        {"name": "O. AKBOU", "img": "AKBOU.jpg"},
+        {"name": "ESBA", "img": "ESBA.jpg"}
     ]
 }
 
