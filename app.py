@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from PIL import Image
 
 # ---------------------------------------------------
 # CONFIG STREAMLIT
@@ -15,11 +14,6 @@ st.title("🏆 DZBEST 2025")
 # ---------------------------------------------------
 if "page" not in st.session_state:
     st.session_state.page = "vote"
-
-# ---------------------------------------------------
-# IMAGES PAR DÉFAUT
-# ---------------------------------------------------
-DEFAULT_IMG = "Assets/defqult.jpg"
 
 # ---------------------------------------------------
 # DONNÉES
@@ -74,9 +68,9 @@ sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").works
 # ---------------------------------------------------
 if st.session_state.page == "vote":
 
-    nom = st.text_input("📝 Nom et prénom", "")
-    tel = st.text_input("📞 Téléphone", "")
-    media = st.text_input("📸 Média", "")
+    nom = st.text_input("📝 Nom et prénom")
+    tel = st.text_input("📞 Téléphone")
+    media = st.text_input("📸 Média")
 
     def is_valid_phone(t):
         return t.isdigit() and len(t) == 9
@@ -88,23 +82,13 @@ if st.session_state.page == "vote":
         remaining_players = participants.copy()
         selections = []
 
-        for i in range(1, max_choices[cat]+1):
-            st.markdown(f"**Choix #{i} :**")
+        for i in range(1, max_choices[cat] + 1):
             options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
-            selected_name = st.selectbox(f"Classe {i} - {cat}", options, key=f"{cat}_{i}")
+            selected = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
 
-            if selected_name != "--- Sélectionnez ---":
-                selections.append(selected_name)
-                remaining_players = [p for p in remaining_players if p["name"] != selected_name]
-
-                p_img_name = next((p["img"] for p in participants if p["name"] == selected_name), "defqult.jpg")
-                p_img_path = f"Assets/{p_img_name}"
-
-                col1, col2 = st.columns([1, 5])
-                with col1:
-                    st.image(p_img_path, width=80)
-                with col2:
-                    st.write(selected_name)
+            if selected != "--- Sélectionnez ---":
+                selections.append(selected)
+                remaining_players = [p for p in remaining_players if p["name"] != selected]
 
         vote_data[cat] = selections
 
@@ -112,8 +96,8 @@ if st.session_state.page == "vote":
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
 
-        if not df.empty:
-            if "Téléphone" in df.columns and tel in df["Téléphone"].values:
+        if not df.empty and "Téléphone" in df.columns:
+            if tel in df["Téléphone"].values:
                 return False
 
         rows = []
@@ -123,34 +107,35 @@ if st.session_state.page == "vote":
 
         for r in rows:
             sheet.append_row(r)
+
         return True
 
     if st.button("✅ Envoyer mon vote"):
 
-        if not nom.strip():
-            st.error("⚠️ Entrez votre nom")
-        elif not is_valid_phone(tel.strip()):
-            st.error("⚠️ Entrez un numéro valide de 9 chiffres")
-        elif not media.strip():
-            st.error("⚠️ Entrez votre média")
+        if not nom:
+            st.error("Entrez votre nom")
+        elif not is_valid_phone(tel):
+            st.error("Numéro invalide")
+        elif not media:
+            st.error("Entrez votre média")
         else:
-            ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
+            ok = save_vote(nom, tel, media, vote_data)
+
             if ok:
                 st.session_state.page = "results"
                 st.rerun()
             else:
-                st.error("⚠️ Vous avez déjà voté")
+                st.error("Vous avez déjà voté")
 
 # ---------------------------------------------------
-# PAGE RÉSULTATS (NOUVELLE PAGE)
+# PAGE RESULTATS
 # ---------------------------------------------------
 if st.session_state.page == "results":
 
-    st.markdown("### ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
-    st.image("Assets/logo.PNG", width=200)
-    st.markdown("**✅ Vote enregistré ! Merci pour votre participation !**")
+    st.success("Vote enregistré !")
 
     data = sheet.get_all_records()
+
     if data:
         df = pd.DataFrame(data)
         df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
@@ -158,8 +143,15 @@ if st.session_state.page == "results":
         for cat in categories:
             st.subheader(cat)
 
-            df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
-df_cat = df_cat.sort_values(by="Points", ascending=False).head(5)
-df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
+            df_cat = (
+                df[df["Categorie"] == cat]
+                .groupby("Candidat")["Points"]
+                .sum()
+                .reset_index()
+                .sort_values(by="Points", ascending=False)
+                .head(5)
+            )
+
+            df_cat.insert(0, "Classement", range(1, len(df_cat) + 1))
 
             st.dataframe(df_cat, use_container_width=True, hide_index=True)
