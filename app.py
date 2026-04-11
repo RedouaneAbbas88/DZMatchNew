@@ -159,7 +159,7 @@ if st.session_state.page == "results":
             st.subheader(cat)
 
             df_cat = df[df["Categorie"] == cat].groupby("Candidat")["Points"].sum().reset_index()
-            df_cat = df_cat.sort_values(by="Points", ascending=False)
-            df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
+df_cat = df_cat.sort_values(by="Points", ascending=False).head(5)
+df_cat.insert(0, "Classement", range(1, len(df_cat)+1))
 
             st.dataframe(df_cat, use_container_width=True, hide_index=True)
