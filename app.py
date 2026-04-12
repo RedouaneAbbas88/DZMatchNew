@@ -28,11 +28,11 @@ categories = {
         {"name": "Achraf Abada (ASO/USMA)", "img": "defqult.jpg"}
     ],
     "Meilleur gardien": [
-        {"name": "Abdelkader Salhi (JSS)", "img": "defqult.jpg"},
-        {"name": "Oussama Benbout (USMA)", "img": "defqult.jpg"},
-        {"name": "Alexis Guendouz (MCA)", "img": "defqult.jpg"},
-        {"name": "Farid Chaal (CRB)", "img": "defqult.jpg"},
-        {"name": "Ghaya Merbah (JSK)", "img": "defqult.jpg"}
+        {"name": "Abdelkader Salhi (JSS)", "img": "salhi.jpg"},
+        {"name": "Oussama Benbout (USMA)", "img": "benbout.jpg"},
+        {"name": "Alexis Guendouz (MCA)", "img": "alexis.jpg"},
+        {"name": "Farid Chaal (CRB)", "img": "chaal.jpg"},
+        {"name": "Ghaya Merbah (JSK)", "img": "merbah.jpg"}
     ],
     "Meilleur entraîneur": [
         {"name": "Mounir Zegdoud (Étoile de Ben Aknoun)", "img": "defqult.jpg"},
