@@ -6,8 +6,8 @@ from google.oauth2.service_account import Credentials
 # ---------------------------------------------------
 # CONFIG
 # ---------------------------------------------------
-st.set_page_config(page_title="DZBEST 2025", layout="wide")
-st.title("🏆 DZBEST 2025")
+st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
+st.title("🏆 DZBEST 2025/2026")
 
 # ---------------------------------------------------
 # NAVIGATION
