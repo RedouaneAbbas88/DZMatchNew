@@ -8,11 +8,23 @@ from google.oauth2.service_account import Credentials
 # ---------------------------------------------------
 st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
 st.markdown("<h3 style='text-align: center;'>🏆 DZBEST 2025/2026</h3>", unsafe_allow_html=True)
+
 # ---------------------------------------------------
 # NAVIGATION
 # ---------------------------------------------------
 if "page" not in st.session_state:
     st.session_state.page = "vote"
+
+# 🔥 BOUTONS NAVIGATION
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("🗳️ Vote"):
+        st.session_state.page = "vote"
+
+with col2:
+    if st.button("🔐 Admin"):
+        st.session_state.page = "admin"
 
 # ---------------------------------------------------
 # DATA
@@ -91,11 +103,10 @@ if st.session_state.page == "vote":
                 remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
                 p_img_name = next((p["img"] for p in participants if p["name"] == selected_name), "defqult.jpg")
-                p_img_path = f"Assets/{p_img_name}"
 
                 col1, col2 = st.columns([1, 5])
                 with col1:
-                    st.image(p_img_path, width=80)
+                    st.image(f"Assets/{p_img_name}", width=80)
                 with col2:
                     st.write(selected_name)
 
@@ -133,13 +144,9 @@ if st.session_state.page == "vote":
                 st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
-# PAGE RESULTATS
+# FONCTION AFFICHAGE RESULTATS
 # ---------------------------------------------------
-if st.session_state.page == "results":
-
-    st.markdown("### ⚽ ⚽ ⚽ ⚽ ⚽ ⚽ ⚽")
-    st.image("Assets/logo.PNG", width=200)
-    st.success("✅ Vote enregistré !")
+def show_results():
 
     data = sheet.get_all_records()
 
@@ -162,7 +169,6 @@ if st.session_state.page == "results":
             top5 = df_cat.head(5).copy()
             top5.insert(0, "Classement", range(1, len(top5)+1))
 
-            # 🏆 PODIUM
             st.markdown("### 🥇 Podium")
 
             podium = top5.head(3)
@@ -179,12 +185,20 @@ if st.session_state.page == "results":
                     st.markdown(f"**#{i+1} {name}**")
                     st.write(f"{pts} points")
 
-            # 📊 TABLE
             st.markdown("### 📊 Classement")
             st.dataframe(top5, use_container_width=True, hide_index=True)
 
 # ---------------------------------------------------
-# PAGE ADMIN (ORGANISATEUR)
+# PAGE RESULTATS
+# ---------------------------------------------------
+if st.session_state.page == "results":
+
+    st.image("Assets/logo.PNG", width=200)
+    st.success("✅ Vote enregistré !")
+    show_results()
+
+# ---------------------------------------------------
+# PAGE ADMIN
 # ---------------------------------------------------
 if st.session_state.page == "admin":
 
@@ -192,51 +206,9 @@ if st.session_state.page == "admin":
 
     password = st.text_input("Mot de passe", type="password")
 
-    if password == "admin123":  # 🔴 change ce mot de passe
-
+    if password == "DzBest2026!":
         st.success("Accès autorisé")
-
-        data = sheet.get_all_records()
-
-        if data:
-            df = pd.DataFrame(data)
-            df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
-
-            for cat, participants in categories.items():
-
-                st.subheader(f"🏅 {cat}")
-
-                df_cat = (
-                    df[df["Categorie"] == cat]
-                    .groupby("Candidat")["Points"]
-                    .sum()
-                    .reset_index()
-                    .sort_values(by="Points", ascending=False)
-                )
-
-                top5 = df_cat.head(5).copy()
-                top5.insert(0, "Classement", range(1, len(top5)+1))
-
-                # 🏆 PODIUM
-                st.markdown("### 🥇 Podium")
-
-                podium = top5.head(3)
-                cols = st.columns(3)
-
-                for i, (_, row) in enumerate(podium.iterrows()):
-                    name = row["Candidat"]
-                    pts = row["Points"]
-
-                    img = next((p["img"] for p in participants if p["name"] == name), "defqult.jpg")
-
-                    with cols[i]:
-                        st.image(f"Assets/{img}", width=120)
-                        st.markdown(f"**#{i+1} {name}**")
-                        st.write(f"{pts} points")
-
-                # 📊 TABLE
-                st.markdown("### 📊 Classement")
-                st.dataframe(top5, use_container_width=True, hide_index=True)
+        show_results()
 
     elif password != "":
         st.error("Mot de passe incorrect ❌")
