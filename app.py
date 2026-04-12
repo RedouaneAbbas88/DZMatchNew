@@ -183,3 +183,61 @@ if st.session_state.page == "results":
             # 📊 TABLE
             st.markdown("### 📊 Classement")
             st.dataframe(top5, use_container_width=True, hide_index=True)
+
+# ---------------------------------------------------
+# PAGE ADMIN (ORGANISATEUR)
+# ---------------------------------------------------
+if st.session_state.page == "admin":
+
+    st.title("🔐 Espace Organisateur")
+
+    password = st.text_input("Mot de passe", type="password")
+
+    if password == "admin123":  # 🔴 change ce mot de passe
+
+        st.success("Accès autorisé")
+
+        data = sheet.get_all_records()
+
+        if data:
+            df = pd.DataFrame(data)
+            df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
+
+            for cat, participants in categories.items():
+
+                st.subheader(f"🏅 {cat}")
+
+                df_cat = (
+                    df[df["Categorie"] == cat]
+                    .groupby("Candidat")["Points"]
+                    .sum()
+                    .reset_index()
+                    .sort_values(by="Points", ascending=False)
+                )
+
+                top5 = df_cat.head(5).copy()
+                top5.insert(0, "Classement", range(1, len(top5)+1))
+
+                # 🏆 PODIUM
+                st.markdown("### 🥇 Podium")
+
+                podium = top5.head(3)
+                cols = st.columns(3)
+
+                for i, (_, row) in enumerate(podium.iterrows()):
+                    name = row["Candidat"]
+                    pts = row["Points"]
+
+                    img = next((p["img"] for p in participants if p["name"] == name), "defqult.jpg")
+
+                    with cols[i]:
+                        st.image(f"Assets/{img}", width=120)
+                        st.markdown(f"**#{i+1} {name}**")
+                        st.write(f"{pts} points")
+
+                # 📊 TABLE
+                st.markdown("### 📊 Classement")
+                st.dataframe(top5, use_container_width=True, hide_index=True)
+
+    elif password != "":
+        st.error("Mot de passe incorrect ❌")
