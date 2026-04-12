@@ -35,11 +35,11 @@ categories = {
         {"name": "Ghaya Merbah (JSK)", "img": "merbah.jpg"}
     ],
     "Meilleur entraîneur": [
-        {"name": "Mounir Zegdoud (Étoile de Ben Aknoun)", "img": "defqult.jpg"},
-        {"name": "Lotfi Amrouche (Akbou / Sétif)", "img": "defqult.jpg"},
-        {"name": "Sead Ramović (CRB)", "img": "defqult.jpg"},
-        {"name": "Abdelkader Amrani (JSS)", "img": "defqult.jpg"},
-        {"name": "Chérif El Ouazzani (MCO)", "img": "defqult.jpg"}
+        {"name": "Mounir Zegdoud (Étoile de Ben Aknoun)", "img": "mounir.jpg"},
+        {"name": "Lotfi Amrouche (Akbou / Sétif)", "img": "amrouche.jpg"},
+        {"name": "Sead Ramović (CRB)", "img": "sead.jpg"},
+        {"name": "Abdelkader Amrani (JSS)", "img": "amrani.jpg"},
+        {"name": "Chérif El Ouazzani (MCO)", "img": "cherif.jpg"}
     ],
     "Meilleur club": [
         {"name": "MCA", "img": "MCA.jpg"},
