@@ -73,7 +73,7 @@ if st.session_state.page == "vote":
     media = st.text_input("📸 Média")
 
     def is_valid_phone(t):
-        return t.isdigit() and len(t) == 9
+        return t.isdigit() and len(t) == 10
 
     vote_data = {}
 
