@@ -82,7 +82,7 @@ def save_vote(nom, tel, email, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
-    # anti double vote
+    # anti double vote (tel)
     if not df.empty and "Téléphone" in df.columns:
         if tel in df["Téléphone"].values:
             return False
@@ -120,9 +120,8 @@ if st.session_state.page == "vote":
         selections = []
 
         for i in range(1, max_choices[cat] + 1):
-            st.markdown(f"**Choix #{i} :**")
             options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
-            selected_name = st.selectbox(f"{cat} - Classe {i}", options, key=f"{cat}_{i}")
+            selected_name = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
 
             if selected_name != "--- Sélectionnez ---":
                 selections.append(selected_name)
@@ -213,12 +212,23 @@ def show_results():
             st.dataframe(top5, use_container_width=True, hide_index=True)
 
 # ---------------------------------------------------
-# RESULTS PAGE
+# PAGE RESULTS (SCROLL TOP FIX)
 # ---------------------------------------------------
 if st.session_state.page == "results":
 
+    # 🔥 FORCE SCROLL TOP
+    st.markdown(
+        """
+        <script>
+            window.scrollTo(0, 0);
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.image("Assets/logo.PNG", width=200)
     st.success("✅ Vote enregistré !")
+
     show_results()
 
 # ---------------------------------------------------
