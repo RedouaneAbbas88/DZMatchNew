@@ -74,11 +74,14 @@ if st.session_state.page == "vote":
 
     nom = st.text_input("📝 Nom et prénom")
     tel = st.text_input("📞 Téléphone")
+    email = st.text_input("📧 Email")
     media = st.text_input("📸 Média")
 
     def is_valid_phone(t):
         return t.isdigit() and len(t) == 10
 
+    def is_valid_email(e):
+        return "@" in e and "." in e
     vote_data = {}
 
     for cat, participants in categories.items():
@@ -112,10 +115,12 @@ if st.session_state.page == "vote":
         if not df.empty and "Téléphone" in df.columns:
             if tel in df["Téléphone"].values:
                 return False
+elif not is_valid_email(email.strip()):
+    st.error("⚠️ Email invalide")
 
         for cat, selections in votes.items():
             for i, candidat in enumerate(selections, start=1):
-                sheet.append_row([nom, tel, media, cat, candidat, i, points.get(i, 0)])
+                sheet.append_row([nom, tel, email, media, cat, candidat, i, points.get(i, 0)])
 
         return True
 
