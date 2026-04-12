@@ -7,8 +7,7 @@ from google.oauth2.service_account import Credentials
 # CONFIG
 # ---------------------------------------------------
 st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
-st.markdown("<h2 style='text-align: center;'>🏆 DZBEST 2025/2026</h2>", unsafe_allow_html=True)
-
+st.markdown("<h3 style='text-align: center;'>🏆 DZBEST 2025/2026</h3>", unsafe_allow_html=True)
 # ---------------------------------------------------
 # NAVIGATION
 # ---------------------------------------------------
