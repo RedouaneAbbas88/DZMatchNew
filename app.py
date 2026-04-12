@@ -15,16 +15,9 @@ st.markdown("<h3 style='text-align: center;'>🏆 DZBEST 2025/2026</h3>", unsafe
 if "page" not in st.session_state:
     st.session_state.page = "vote"
 
-# 🔥 BOUTONS NAVIGATION
-col1, col2 = st.columns(2)
-
-with col1:
-    if st.button("🗳️ Vote"):
-        st.session_state.page = "vote"
-
-with col2:
-    if st.button("🔐 Admin"):
-        st.session_state.page = "admin"
+# 🔐 BOUTON ADMIN UNIQUEMENT
+if st.button("🔐 Admin"):
+    st.session_state.page = "admin"
 
 # ---------------------------------------------------
 # DATA
@@ -144,7 +137,7 @@ if st.session_state.page == "vote":
                 st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
-# FONCTION AFFICHAGE RESULTATS
+# FONCTION RESULTATS
 # ---------------------------------------------------
 def show_results():
 
