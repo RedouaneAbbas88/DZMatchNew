@@ -20,12 +20,12 @@ if "page" not in st.session_state:
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Zineddine Ferhat (MCA)", "img": "boulbina.jpg"},
-        {"name": "Mohamed Khacef(CRB)", "img": "mahious.jpg"},
-        {"name": "Houssem Ghacha (USMA)", "img": "defqult.jpg"},
-        {"name": "Zineddine Belaid (JSK)", "img": "defqult.jpg"},
-        {"name": "Merouane Zerrouki (ESS)", "img": "defqult.jpg"},
-        {"name": "Achraf Abada (ASO/USMA)", "img": "defqult.jpg"}
+        {"name": "Zineddine Ferhat (MCA)", "img": "ferhat.jpg"},
+        {"name": "Mohamed Khacef(CRB)", "img": "khacef.jpg"},
+        {"name": "Houssem Ghacha (USMA)", "img": "ghacha.jpg"},
+        {"name": "Zineddine Belaid (JSK)", "img": "belaid.jpg"},
+        {"name": "Merouane Zerrouki (ESS)", "img": "zerrouki.jpg"},
+        {"name": "Achraf Abada (ASO/USMA)", "img": "abada.jpg"}
     ],
     "Meilleur gardien": [
         {"name": "Abdelkader Salhi (JSS)", "img": "salhi.jpg"},
