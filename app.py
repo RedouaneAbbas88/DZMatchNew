@@ -15,7 +15,6 @@ st.markdown("<h3 style='text-align: center;'>🏆 DZBEST 2025/2026</h3>", unsafe
 if "page" not in st.session_state:
     st.session_state.page = "vote"
 
-# 🔐 BOUTON ADMIN UNIQUEMENT
 if st.button("🔐 Admin"):
     st.session_state.page = "admin"
 
@@ -60,12 +59,48 @@ max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
+# VALIDATION
+# ---------------------------------------------------
+def is_valid_phone(t):
+    return t.isdigit() and len(t) == 10
+
+def is_valid_email(e):
+    return "@" in e and "." in e
+
+# ---------------------------------------------------
 # GOOGLE SHEETS
 # ---------------------------------------------------
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_info(st.secrets["google"], scopes=SCOPES)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
+
+# ---------------------------------------------------
+# SAVE VOTE
+# ---------------------------------------------------
+def save_vote(nom, tel, email, media, votes):
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+
+    # anti double vote
+    if not df.empty and "Téléphone" in df.columns:
+        if tel in df["Téléphone"].values:
+            return False
+
+    for cat, selections in votes.items():
+        for i, candidat in enumerate(selections, start=1):
+            sheet.append_row([
+                nom,
+                tel,
+                email,
+                media,
+                cat,
+                candidat,
+                i,
+                points.get(i, 0)
+            ])
+
+    return True
 
 # ---------------------------------------------------
 # PAGE VOTE
@@ -77,11 +112,6 @@ if st.session_state.page == "vote":
     email = st.text_input("📧 Email")
     media = st.text_input("📸 Média")
 
-    def is_valid_phone(t):
-        return t.isdigit() and len(t) == 10
-
-    def is_valid_email(e):
-        return "@" in e and "." in e
     vote_data = {}
 
     for cat, participants in categories.items():
@@ -89,51 +119,47 @@ if st.session_state.page == "vote":
         remaining_players = participants.copy()
         selections = []
 
-        for i in range(1, max_choices[cat]+1):
+        for i in range(1, max_choices[cat] + 1):
             st.markdown(f"**Choix #{i} :**")
             options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
-            selected_name = st.selectbox(f"Classe {i} - {cat}", options, key=f"{cat}_{i}")
+            selected_name = st.selectbox(f"{cat} - Classe {i}", options, key=f"{cat}_{i}")
 
             if selected_name != "--- Sélectionnez ---":
                 selections.append(selected_name)
                 remaining_players = [p for p in remaining_players if p["name"] != selected_name]
 
-                p_img_name = next((p["img"] for p in participants if p["name"] == selected_name), "defqult.jpg")
+                img = next((p["img"] for p in participants if p["name"] == selected_name), "default.jpg")
 
                 col1, col2 = st.columns([1, 5])
                 with col1:
-                    st.image(f"Assets/{p_img_name}", width=80)
+                    st.image(f"Assets/{img}", width=80)
                 with col2:
                     st.write(selected_name)
 
         vote_data[cat] = selections
 
-    def save_vote(nom, tel, media, votes):
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-
-        if not df.empty and "Téléphone" in df.columns:
-            if tel in df["Téléphone"].values:
-                return False
-elif not is_valid_email(email.strip()):
-    st.error("⚠️ Email invalide")
-
-        for cat, selections in votes.items():
-            for i, candidat in enumerate(selections, start=1):
-                sheet.append_row([nom, tel, email, media, cat, candidat, i, points.get(i, 0)])
-
-        return True
-
     if st.button("✅ Envoyer mon vote"):
 
         if not nom.strip():
             st.error("⚠️ Entrez votre nom")
+
         elif not is_valid_phone(tel.strip()):
             st.error("⚠️ Numéro invalide")
+
+        elif not is_valid_email(email.strip()):
+            st.error("⚠️ Email invalide")
+
         elif not media.strip():
             st.error("⚠️ Entrez votre média")
+
         else:
-            ok = save_vote(nom.strip(), tel.strip(), media.strip(), vote_data)
+            ok = save_vote(
+                nom.strip(),
+                tel.strip(),
+                email.strip(),
+                media.strip(),
+                vote_data
+            )
 
             if ok:
                 st.session_state.page = "results"
@@ -142,7 +168,7 @@ elif not is_valid_email(email.strip()):
                 st.error("⚠️ Vous avez déjà voté")
 
 # ---------------------------------------------------
-# FONCTION RESULTATS
+# RESULTS
 # ---------------------------------------------------
 def show_results():
 
@@ -165,7 +191,7 @@ def show_results():
             )
 
             top5 = df_cat.head(5).copy()
-            top5.insert(0, "Classement", range(1, len(top5)+1))
+            top5.insert(0, "Classement", range(1, len(top5) + 1))
 
             st.markdown("### 🥇 Podium")
 
@@ -176,7 +202,7 @@ def show_results():
                 name = row["Candidat"]
                 pts = row["Points"]
 
-                img = next((p["img"] for p in participants if p["name"] == name), "defqult.jpg")
+                img = next((p["img"] for p in participants if p["name"] == name), "default.jpg")
 
                 with cols[i]:
                     st.image(f"Assets/{img}", width=120)
@@ -187,7 +213,7 @@ def show_results():
             st.dataframe(top5, use_container_width=True, hide_index=True)
 
 # ---------------------------------------------------
-# PAGE RESULTATS
+# RESULTS PAGE
 # ---------------------------------------------------
 if st.session_state.page == "results":
 
@@ -196,7 +222,7 @@ if st.session_state.page == "results":
     show_results()
 
 # ---------------------------------------------------
-# PAGE ADMIN
+# ADMIN PAGE
 # ---------------------------------------------------
 if st.session_state.page == "admin":
 
