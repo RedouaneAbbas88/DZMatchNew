@@ -52,6 +52,13 @@ categories = {
         {"name": "JSK", "img": "JSK.jpg"},
         {"name": "O. AKBOU", "img": "akbou.jpg"},
         {"name": "ESBA", "img": "ESBA.jpg"}
+    ],
+    "Meilleur joueur étranger": [
+        {"name": "Che Malone (USMA)", "img": "malone.jpg"},
+        {"name": "Arthur Bada (JSK)", "img": "bada.jpg"},
+        {"name": "Matuti (USMK)", "img": "matuti.jpg"},
+        {"name": "Kipre Junior (MCA)", "img": "Kipre Junior.jpg"},
+        {"name": "Mohamed Ali Ben Hamouda (CRB)", "img": "benhamouda.jpg"}
     ]
 }
 
@@ -76,15 +83,26 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# SAVE VOTE
+# SAVE VOTE (ANTI DOUBLE VOTE)
 # ---------------------------------------------------
 def save_vote(nom, tel, email, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
-    # anti double vote (tel)
-    if not df.empty and "Téléphone" in df.columns:
-        if tel in df["Téléphone"].values:
+    if not df.empty:
+        df["Nom"] = df["Nom"].astype(str).str.strip().str.lower()
+        df["Téléphone"] = df["Téléphone"].astype(str).str.strip()
+        df["Email"] = df["Email"].astype(str).str.strip().str.lower()
+
+        nom_clean = nom.strip().lower()
+        tel_clean = tel.strip()
+        email_clean = email.strip().lower()
+
+        if (
+            nom_clean in df["Nom"].values
+            or tel_clean in df["Téléphone"].values
+            or email_clean in df["Email"].values
+        ):
             return False
 
     for cat, selections in votes.items():
@@ -152,13 +170,7 @@ if st.session_state.page == "vote":
             st.error("⚠️ Entrez votre média")
 
         else:
-            ok = save_vote(
-                nom.strip(),
-                tel.strip(),
-                email.strip(),
-                media.strip(),
-                vote_data
-            )
+            ok = save_vote(nom.strip(), tel.strip(), email.strip(), media.strip(), vote_data)
 
             if ok:
                 st.session_state.page = "results"
@@ -170,7 +182,6 @@ if st.session_state.page == "vote":
 # RESULTS
 # ---------------------------------------------------
 def show_results():
-
     data = sheet.get_all_records()
 
     if data:
@@ -212,17 +223,12 @@ def show_results():
             st.dataframe(top5, use_container_width=True, hide_index=True)
 
 # ---------------------------------------------------
-# PAGE RESULTS (SCROLL TOP FIX)
+# PAGE RESULTS
 # ---------------------------------------------------
 if st.session_state.page == "results":
 
-    # 🔥 FORCE SCROLL TOP
     st.markdown(
-        """
-        <script>
-            window.scrollTo(0, 0);
-        </script>
-        """,
+        """<script>window.scrollTo(0, 0);</script>""",
         unsafe_allow_html=True
     )
 
@@ -232,7 +238,7 @@ if st.session_state.page == "results":
     show_results()
 
 # ---------------------------------------------------
-# ADMIN PAGE
+# ADMIN
 # ---------------------------------------------------
 if st.session_state.page == "admin":
 
