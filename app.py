@@ -70,7 +70,7 @@ categories = {
         {"name": "Che Malone (USMA)", "img": "malone.jpg"},
         {"name": "Arthur Bada (JSK)", "img": "bada.jpg"},
         {"name": "Matuti (USMK)", "img": "matuti.jpg"},
-        {"name": "Kipre Junior (MCA)", "img": "kipre.jpg"},
+        {"name": "Kipre Junior (MCA)", "img": "Kipre.jpg"},
         {"name": "Mohamed Ali Ben Hamouda (CRB)", "img": "benhamouda.jpg"}
     ]
 }
