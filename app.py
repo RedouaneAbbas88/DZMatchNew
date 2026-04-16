@@ -57,7 +57,7 @@ categories = {
         {"name": "Che Malone (USMA)", "img": "malone.jpg"},
         {"name": "Arthur Bada (JSK)", "img": "bada.jpg"},
         {"name": "Matuti (USMK)", "img": "matuti.jpg"},
-        {"name": "Kipre Junior (MCA)", "img": "Kipre Junior.jpg"},
+        {"name": "Kipre Junior (MCA)", "img": "kipre.jpg"},
         {"name": "Mohamed Ali Ben Hamouda (CRB)", "img": "benhamouda.jpg"}
     ]
 }
@@ -83,13 +83,21 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# SAVE VOTE (ANTI DOUBLE VOTE)
+# SAVE VOTE (ANTI DOUBLE VOTE STRICT)
 # ---------------------------------------------------
 def save_vote(nom, tel, email, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
     if not df.empty:
+
+        required_cols = ["Nom", "Téléphone", "Email"]
+        for col in required_cols:
+            if col not in df.columns:
+                st.error(f"Colonne manquante : {col}")
+                return False
+
+        # Nettoyage
         df["Nom"] = df["Nom"].astype(str).str.strip().str.lower()
         df["Téléphone"] = df["Téléphone"].astype(str).str.strip()
         df["Email"] = df["Email"].astype(str).str.strip().str.lower()
@@ -98,13 +106,15 @@ def save_vote(nom, tel, email, media, votes):
         tel_clean = tel.strip()
         email_clean = email.strip().lower()
 
+        # 🚫 Blocage si UN SEUL doublon existe
         if (
-            nom_clean in df["Nom"].values
-            or tel_clean in df["Téléphone"].values
-            or email_clean in df["Email"].values
+            (df["Nom"] == nom_clean).any()
+            or (df["Téléphone"] == tel_clean).any()
+            or (df["Email"] == email_clean).any()
         ):
             return False
 
+    # Enregistrement
     for cat, selections in votes.items():
         for i, candidat in enumerate(selections, start=1):
             sheet.append_row([
