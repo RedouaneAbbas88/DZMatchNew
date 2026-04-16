@@ -19,6 +19,19 @@ if st.button("🔐 Admin"):
     st.session_state.page = "admin"
 
 # ---------------------------------------------------
+# FONCTIONS UTILES
+# ---------------------------------------------------
+def clean_phone(phone):
+    return "".join(filter(str.isdigit, phone))
+
+def is_valid_phone(t):
+    t = clean_phone(t)
+    return t.isdigit() and len(t) == 10
+
+def is_valid_email(e):
+    return "@" in e and "." in e
+
+# ---------------------------------------------------
 # DATA
 # ---------------------------------------------------
 categories = {
@@ -57,22 +70,13 @@ categories = {
         {"name": "Che Malone (USMA)", "img": "malone.jpg"},
         {"name": "Arthur Bada (JSK)", "img": "bada.jpg"},
         {"name": "Matuti (USMK)", "img": "matuti.jpg"},
-        {"name": "Kipre Junior (MCA)", "img": "kipre Junior.jpg"},
+        {"name": "Kipre Junior (MCA)", "img": "kipre junior.jpg"},
         {"name": "Mohamed Ali Ben Hamouda (CRB)", "img": "benhamouda.jpg"}
     ]
 }
 
 max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
-
-# ---------------------------------------------------
-# VALIDATION
-# ---------------------------------------------------
-def is_valid_phone(t):
-    return t.isdigit() and len(t) == 10
-
-def is_valid_email(e):
-    return "@" in e and "." in e
 
 # ---------------------------------------------------
 # GOOGLE SHEETS
@@ -83,30 +87,21 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc").worksheet("Feuille 1")
 
 # ---------------------------------------------------
-# SAVE VOTE (ANTI DOUBLE VOTE STRICT)
+# SAVE VOTE
 # ---------------------------------------------------
 def save_vote(nom, tel, email, media, votes):
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
 
+    nom_clean = nom.strip().lower()
+    tel_clean = clean_phone(tel)
+    email_clean = email.strip().lower()
+
     if not df.empty:
-
-        required_cols = ["Nom", "Téléphone", "Email"]
-        for col in required_cols:
-            if col not in df.columns:
-                st.error(f"Colonne manquante : {col}")
-                return False
-
-        # Nettoyage
         df["Nom"] = df["Nom"].astype(str).str.strip().str.lower()
-        df["Téléphone"] = df["Téléphone"].astype(str).str.strip()
+        df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
         df["Email"] = df["Email"].astype(str).str.strip().str.lower()
 
-        nom_clean = nom.strip().lower()
-        tel_clean = tel.strip()
-        email_clean = email.strip().lower()
-
-        # 🚫 Blocage si UN SEUL doublon existe
         if (
             (df["Nom"] == nom_clean).any()
             or (df["Téléphone"] == tel_clean).any()
@@ -114,12 +109,11 @@ def save_vote(nom, tel, email, media, votes):
         ):
             return False
 
-    # Enregistrement
     for cat, selections in votes.items():
         for i, candidat in enumerate(selections, start=1):
             sheet.append_row([
                 nom,
-                tel,
+                tel_clean,
                 email,
                 media,
                 cat,
@@ -136,7 +130,11 @@ def save_vote(nom, tel, email, media, votes):
 if st.session_state.page == "vote":
 
     nom = st.text_input("📝 Nom et prénom")
-    tel = st.text_input("📞 Téléphone")
+
+    tel = st.text_input("📞 Téléphone", placeholder="0550XXXXXX")
+    if tel and not clean_phone(tel) == tel:
+        st.warning("⚠️ Veuillez saisir uniquement des chiffres")
+
     email = st.text_input("📧 Email")
     media = st.text_input("📸 Média")
 
@@ -170,8 +168,8 @@ if st.session_state.page == "vote":
         if not nom.strip():
             st.error("⚠️ Entrez votre nom")
 
-        elif not is_valid_phone(tel.strip()):
-            st.error("⚠️ Numéro invalide")
+        elif not is_valid_phone(tel):
+            st.error("⚠️ Numéro invalide (10 chiffres requis)")
 
         elif not is_valid_email(email.strip()):
             st.error("⚠️ Email invalide")
@@ -180,7 +178,7 @@ if st.session_state.page == "vote":
             st.error("⚠️ Entrez votre média")
 
         else:
-            ok = save_vote(nom.strip(), tel.strip(), email.strip(), media.strip(), vote_data)
+            ok = save_vote(nom, tel, email, media, vote_data)
 
             if ok:
                 st.session_state.page = "results"
@@ -233,15 +231,11 @@ def show_results():
             st.dataframe(top5, use_container_width=True, hide_index=True)
 
 # ---------------------------------------------------
-# PAGE RESULTS
+# RESULTS PAGE
 # ---------------------------------------------------
 if st.session_state.page == "results":
 
-    st.markdown(
-        """<script>window.scrollTo(0, 0);</script>""",
-        unsafe_allow_html=True
-    )
-
+    st.markdown("<script>window.scrollTo(0,0);</script>", unsafe_allow_html=True)
     st.image("Assets/logo.PNG", width=200)
     st.success("✅ Vote enregistré !")
 
