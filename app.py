@@ -36,7 +36,7 @@ def is_valid_email(e):
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
-        {"name": "Zineddine Ferhat (MCA)", "img": "ferhat.jpg"},
+        {"name": "Mohamed Benkhemassa(MCA)", "img": "Benkhemassa.jpg"},
         {"name": "Mohamed Khacef(CRB)", "img": "khacef.jpg"},
         {"name": "Houssem Ghacha (USMA)", "img": "ghacha.jpg"},
         {"name": "Zineddine Belaid (JSK)", "img": "belaid.jpg"},
