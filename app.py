@@ -136,7 +136,7 @@ if st.session_state.page == "vote":
         st.warning("⚠️ Veuillez saisir uniquement des chiffres")
 
     email = st.text_input("📧 Email")
-    media = st.text_input("📸 Média")
+    media = st.text_input("📸 Média/Fonction")
 
     vote_data = {}
 
