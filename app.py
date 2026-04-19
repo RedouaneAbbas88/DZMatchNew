@@ -7,7 +7,20 @@ from google.oauth2.service_account import Credentials
 # CONFIG
 # ---------------------------------------------------
 st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
-st.markdown("<h3 style='text-align: center;'>🏆 DZBEST 2025/2026</h3>", unsafe_allow_html=True)
+
+# ---------------------------------------------------
+# HEADER LOGO
+# ---------------------------------------------------
+col1, col2 = st.columns([1, 6])
+
+with col1:
+    st.image("Assets/logo_dz.png", width=80)
+
+with col2:
+    st.markdown("<h2 style='margin-bottom:0;'>DZBEST 2025/2026</h2>", unsafe_allow_html=True)
+    st.markdown("<small>Vote officiel</small>", unsafe_allow_html=True)
+
+st.markdown("---")
 
 # ---------------------------------------------------
 # NAVIGATION
@@ -19,7 +32,7 @@ if st.button("🔐 Admin"):
     st.session_state.page = "admin"
 
 # ---------------------------------------------------
-# FONCTIONS UTILES
+# FONCTIONS
 # ---------------------------------------------------
 def clean_phone(phone):
     return "".join(filter(str.isdigit, phone))
@@ -75,7 +88,6 @@ categories = {
     ]
 }
 
-max_choices = {cat: 5 for cat in categories}
 points = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
 
 # ---------------------------------------------------
@@ -98,9 +110,9 @@ def save_vote(nom, tel, email, media, votes):
     email_clean = email.strip().lower()
 
     if not df.empty:
-        df["Nom"] = df["Nom"].astype(str).str.strip().str.lower()
+        df["Nom"] = df["Nom"].astype(str).str.lower()
         df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
-        df["Email"] = df["Email"].astype(str).str.strip().str.lower()
+        df["Email"] = df["Email"].astype(str).str.lower()
 
         if (
             (df["Nom"] == nom_clean).any()
@@ -125,16 +137,47 @@ def save_vote(nom, tel, email, media, votes):
     return True
 
 # ---------------------------------------------------
+# DASHBOARD ADMIN
+# ---------------------------------------------------
+def admin_dashboard():
+    data = sheet.get_all_records()
+
+    if not data:
+        st.warning("Aucun vote pour le moment")
+        return
+
+    df = pd.DataFrame(data)
+
+    # 👥 Nombre de votants uniques
+    total_voters = df["Téléphone"].nunique()
+    st.markdown("## 👥 Statistiques")
+    st.metric("Nombre de votants", total_voters)
+
+    st.markdown("---")
+    st.markdown("## 📊 Résultats")
+
+    df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
+
+    for cat in categories.keys():
+        st.subheader(f"🏅 {cat}")
+
+        df_cat = (
+            df[df["Categorie"] == cat]
+            .groupby("Candidat")["Points"]
+            .sum()
+            .reset_index()
+            .sort_values(by="Points", ascending=False)
+        )
+
+        st.dataframe(df_cat, use_container_width=True, hide_index=True)
+
+# ---------------------------------------------------
 # PAGE VOTE
 # ---------------------------------------------------
 if st.session_state.page == "vote":
 
     nom = st.text_input("📝 Nom et prénom")
-
-    tel = st.text_input("📞 Téléphone", placeholder="0550XXXXXX")
-    if tel and not clean_phone(tel) == tel:
-        st.warning("⚠️ Veuillez saisir uniquement des chiffres")
-
+    tel = st.text_input("📞 Téléphone")
     email = st.text_input("📧 Email (optionnel)")
     media = st.text_input("📸 Média/Fonction")
 
@@ -142,118 +185,50 @@ if st.session_state.page == "vote":
 
     for cat, participants in categories.items():
         st.subheader(f"🏅 {cat}")
-        remaining_players = participants.copy()
         selections = []
 
-        for i in range(1, max_choices[cat] + 1):
-            options = ["--- Sélectionnez ---"] + [p["name"] for p in remaining_players]
-            selected_name = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
+        for i in range(1, 6):
+            options = ["---"] + [p["name"] for p in participants]
+            selected = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
 
-            if selected_name != "--- Sélectionnez ---":
-                selections.append(selected_name)
-                remaining_players = [p for p in remaining_players if p["name"] != selected_name]
-
-                img = next((p["img"] for p in participants if p["name"] == selected_name), "default.jpg")
-
-                col1, col2 = st.columns([1, 5])
-                with col1:
-                    st.image(f"Assets/{img}", width=80)
-                with col2:
-                    st.write(selected_name)
+            if selected != "---":
+                selections.append(selected)
 
         vote_data[cat] = selections
 
     if st.button("✅ Envoyer mon vote"):
 
         if not nom.strip():
-            st.error("⚠️ Entrez votre nom")
+            st.error("Nom requis")
 
         elif not is_valid_phone(tel):
-            st.error("⚠️ Numéro invalide (10 chiffres requis)")
+            st.error("Téléphone invalide")
 
-        # EMAIL OPTIONNEL
-        elif email.strip() and not is_valid_email(email.strip()):
-            st.error("⚠️ Email invalide")
+        elif email.strip() and not is_valid_email(email):
+            st.error("Email invalide")
 
         elif not media.strip():
-            st.error("⚠️ Entrez votre média")
+            st.error("Média requis")
 
         else:
             ok = save_vote(nom, tel, email, media, vote_data)
 
             if ok:
-                st.session_state.page = "results"
-                st.rerun()
+                st.success("Vote enregistré !")
             else:
-                st.error("⚠️ Vous avez déjà voté")
-
-# ---------------------------------------------------
-# RESULTS
-# ---------------------------------------------------
-def show_results():
-    data = sheet.get_all_records()
-
-    if data:
-        df = pd.DataFrame(data)
-        df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
-
-        for cat, participants in categories.items():
-
-            st.subheader(f"🏅 {cat}")
-
-            df_cat = (
-                df[df["Categorie"] == cat]
-                .groupby("Candidat")["Points"]
-                .sum()
-                .reset_index()
-                .sort_values(by="Points", ascending=False)
-            )
-
-            top5 = df_cat.head(5).copy()
-            top5.insert(0, "Classement", range(1, len(top5) + 1))
-
-            st.markdown("### 🥇 Podium")
-
-            podium = top5.head(3)
-            cols = st.columns(3)
-
-            for i, (_, row) in enumerate(podium.iterrows()):
-                name = row["Candidat"]
-                pts = row["Points"]
-
-                img = next((p["img"] for p in participants if p["name"] == name), "default.jpg")
-
-                with cols[i]:
-                    st.image(f"Assets/{img}", width=120)
-                    st.markdown(f"**#{i+1} {name}**")
-                    st.write(f"{pts} points")
-
-            st.markdown("### 📊 Classement")
-            st.dataframe(top5, use_container_width=True, hide_index=True)
-
-# ---------------------------------------------------
-# RESULTS PAGE
-# ---------------------------------------------------
-if st.session_state.page == "results":
-
-    st.markdown("<script>window.scrollTo(0,0);</script>", unsafe_allow_html=True)
-    st.image("Assets/logo.PNG", width=200)
-    st.success("✅ Vote enregistré !")
-
-    show_results()
+                st.error("Vous avez déjà voté")
 
 # ---------------------------------------------------
 # ADMIN
 # ---------------------------------------------------
 if st.session_state.page == "admin":
 
-    st.title("🔐 Espace Organisateur")
+    st.title("🔐 Admin")
 
     password = st.text_input("Mot de passe", type="password")
 
     if password == "DzBest2026!":
-        st.success("Accès autorisé")
-        show_results()
+        admin_dashboard()
 
     elif password != "":
-        st.error("Mot de passe incorrect ❌")
+        st.error("Mot de passe incorrect")
