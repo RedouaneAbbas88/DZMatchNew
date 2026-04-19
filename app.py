@@ -137,28 +137,20 @@ def save_vote(nom, tel, email, media, votes):
     return True
 
 # ---------------------------------------------------
-# DASHBOARD ADMIN
+# RESULTS
 # ---------------------------------------------------
-def admin_dashboard():
+def show_results():
     data = sheet.get_all_records()
 
     if not data:
-        st.warning("Aucun vote pour le moment")
+        st.warning("Pas encore de résultats")
         return
 
     df = pd.DataFrame(data)
-
-    # 👥 Nombre de votants uniques
-    total_voters = df["Téléphone"].nunique()
-    st.markdown("## 👥 Statistiques")
-    st.metric("Nombre de votants", total_voters)
-
-    st.markdown("---")
-    st.markdown("## 📊 Résultats")
-
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
-    for cat in categories.keys():
+    for cat, participants in categories.items():
+
         st.subheader(f"🏅 {cat}")
 
         df_cat = (
@@ -168,6 +160,21 @@ def admin_dashboard():
             .reset_index()
             .sort_values(by="Points", ascending=False)
         )
+
+        top3 = df_cat.head(3)
+
+        cols = st.columns(3)
+
+        for i, (_, row) in enumerate(top3.iterrows()):
+            name = row["Candidat"]
+            pts = row["Points"]
+
+            img = next((p["img"] for p in participants if p["name"] == name), "default.jpg")
+
+            with cols[i]:
+                st.image(f"Assets/{img}", width=120)
+                st.markdown(f"**#{i+1} {name}**")
+                st.write(f"{pts} points")
 
         st.dataframe(df_cat, use_container_width=True, hide_index=True)
 
@@ -185,14 +192,25 @@ if st.session_state.page == "vote":
 
     for cat, participants in categories.items():
         st.subheader(f"🏅 {cat}")
+
+        remaining = participants.copy()
         selections = []
 
         for i in range(1, 6):
-            options = ["---"] + [p["name"] for p in participants]
-            selected = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
+            options = ["---"] + [p["name"] for p in remaining]
+            choice = st.selectbox(f"{cat} - Choix {i}", options, key=f"{cat}_{i}")
 
-            if selected != "---":
-                selections.append(selected)
+            if choice != "---":
+                selections.append(choice)
+                remaining = [p for p in remaining if p["name"] != choice]
+
+                img = next((p["img"] for p in participants if p["name"] == choice), "default.jpg")
+
+                col1, col2 = st.columns([1, 5])
+                with col1:
+                    st.image(f"Assets/{img}", width=80)
+                with col2:
+                    st.write(choice)
 
         vote_data[cat] = selections
 
@@ -214,9 +232,17 @@ if st.session_state.page == "vote":
             ok = save_vote(nom, tel, email, media, vote_data)
 
             if ok:
-                st.success("Vote enregistré !")
+                st.session_state.page = "results"
+                st.rerun()
             else:
                 st.error("Vous avez déjà voté")
+
+# ---------------------------------------------------
+# RESULTS PAGE
+# ---------------------------------------------------
+if st.session_state.page == "results":
+    st.success("✅ Vote enregistré !")
+    show_results()
 
 # ---------------------------------------------------
 # ADMIN
@@ -228,7 +254,7 @@ if st.session_state.page == "admin":
     password = st.text_input("Mot de passe", type="password")
 
     if password == "DzBest2026!":
-        admin_dashboard()
+        show_results()
 
     elif password != "":
         st.error("Mot de passe incorrect")
