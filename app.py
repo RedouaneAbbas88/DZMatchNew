@@ -105,7 +105,7 @@ def save_vote(nom, tel, email, media, votes):
         if (
             (df["Nom"] == nom_clean).any()
             or (df["Téléphone"] == tel_clean).any()
-            or (df["Email"] == email_clean).any()
+            or (email_clean and (df["Email"] == email_clean).any())
         ):
             return False
 
@@ -135,7 +135,7 @@ if st.session_state.page == "vote":
     if tel and not clean_phone(tel) == tel:
         st.warning("⚠️ Veuillez saisir uniquement des chiffres")
 
-    email = st.text_input("📧 Email")
+    email = st.text_input("📧 Email (optionnel)")
     media = st.text_input("📸 Média/Fonction")
 
     vote_data = {}
@@ -171,7 +171,8 @@ if st.session_state.page == "vote":
         elif not is_valid_phone(tel):
             st.error("⚠️ Numéro invalide (10 chiffres requis)")
 
-        elif not is_valid_email(email.strip()):
+        # EMAIL OPTIONNEL
+        elif email.strip() and not is_valid_email(email.strip()):
             st.error("⚠️ Email invalide")
 
         elif not media.strip():
