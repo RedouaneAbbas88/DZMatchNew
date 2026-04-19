@@ -14,7 +14,7 @@ st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
 col1, col2 = st.columns([1, 6])
 
 with col1:
-    st.image("Assets/logo_dz.png", width=80)
+    st.image("Assets/logo.png", width=80)
 
 with col2:
     st.markdown("<h2 style='margin-bottom:0;'>DZBEST 2025/2026</h2>", unsafe_allow_html=True)
