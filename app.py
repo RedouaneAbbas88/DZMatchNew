@@ -1,3 +1,4 @@
+Voici l'ancien code était bien 
 import streamlit as st
 import pandas as pd
 import gspread
@@ -49,7 +50,7 @@ def safe_image(path, width=120):
         st.image("Assets/default.jpg", width=width)
 
 # ---------------------------------------------------
-# DATA
+# DATA (NOMS EXACTS)
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
@@ -163,8 +164,8 @@ def show_results():
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
     df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
 
-    # 🔥 SEULE MODIFICATION ICI (FIX VRAI PROBLÈME)
-    nb_votants = df["Téléphone"].nunique()
+    df_valid = df[df["Téléphone"].str.len() == 10]
+    nb_votants = df_valid["Téléphone"].drop_duplicates().count()
 
     st.markdown(f"### 👥 Nombre de votants : {nb_votants}")
 
@@ -180,13 +181,14 @@ def show_results():
             .sort_values(by="Points", ascending=False)
         )
 
-        df_cat = df_cat.reset_index(drop=True)
+        # ✅ MODIFICATION UNIQUEMENT ICI → TOP 5
+        df_cat = df_cat.head(5).reset_index(drop=True)
         df_cat.index = df_cat.index + 1
 
-        cols = st.columns(5)
-        top5 = df_cat.head(5)
+        cols = st.columns(3)
+        top3 = df_cat.head(3)
 
-        for i, (_, row) in enumerate(top5.iterrows()):
+        for i, (_, row) in enumerate(top3.iterrows()):
             name = row["Candidat"]
             pts = row["Points"]
 
@@ -278,4 +280,4 @@ if st.session_state.page == "admin":
         show_results()
 
     elif password != "":
-        st.error("Mot de passe incorrect") 
+        st.error("Mot de passe incorrect")
