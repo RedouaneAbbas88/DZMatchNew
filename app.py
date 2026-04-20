@@ -11,14 +11,18 @@ st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
 # ---------------------------------------------------
 # HEADER LOGO
 # ---------------------------------------------------
-col1, col2 = st.columns([3, 5])
-
-with col1:
-    st.image("Assets/logo.PNG", width=200)
+col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
-    st.markdown("<h2 style='margin-bottom:0;'>DZBEST 2025/2026</h2>", unsafe_allow_html=True)
-    st.markdown("<small>Vote officiel</small>", unsafe_allow_html=True)
+    st.image("Assets/logo.PNG", width=200)
+    st.markdown(
+        "<h2 style='text-align:center; margin-bottom:0;'>DZBEST 2025/2026</h2>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        "<p style='text-align:center;'>Vote officiel</p>",
+        unsafe_allow_html=True
+    )
 
 st.markdown("---")
 
