@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import os
 
 # ---------------------------------------------------
 # CONFIG
@@ -36,14 +37,19 @@ def clean_phone(phone):
     return "".join(filter(str.isdigit, phone))
 
 def is_valid_phone(t):
-    t = clean_phone(t)
-    return len(t) == 10
+    return len(clean_phone(t)) == 10
 
 def is_valid_email(e):
     return "@" in e and "." in e
 
+def safe_image(path, width=120):
+    if os.path.exists(path):
+        st.image(path, width=width)
+    else:
+        st.image("Assets/default.jpg", width=width)
+
 # ---------------------------------------------------
-# DATA
+# DATA (NOMS EXACTS)
 # ---------------------------------------------------
 categories = {
     "Meilleur joueur": [
@@ -62,11 +68,11 @@ categories = {
         {"name": "Ghaya Merbah (JSK)", "img": "merbah.jpg"}
     ],
     "Meilleur entraîneur": [
-        {"name": "Mounir Zegdoud", "img": "mounir.jpg"},
-        {"name": "Lotfi Amrouche", "img": "amrouche.jpg"},
-        {"name": "Sead Ramovic", "img": "sead.jpg"},
-        {"name": "Abdelkader Amrani", "img": "amrani.jpg"},
-        {"name": "Cherif El Ouazzani", "img": "cherif.jpg"}
+        {"name": "Mounir Zegdoud (Étoile de Ben Aknoun)", "img": "mounir.jpg"},
+        {"name": "Lotfi Amrouche (Akbou / Sétif)", "img": "amrouche.jpg"},
+        {"name": "Sead Ramović (CRB)", "img": "sead.jpg"},
+        {"name": "Abdelkader Amrani (JSS)", "img": "amrani.jpg"},
+        {"name": "Chérif El Ouazzani (MCO)", "img": "cherif.jpg"}
     ],
     "Meilleur club": [
         {"name": "MCA", "img": "MCA.jpg"},
@@ -78,11 +84,11 @@ categories = {
         {"name": "ESBA", "img": "ESBA.jpg"}
     ],
     "Meilleur joueur étranger": [
-        {"name": "Che Malone", "img": "malone.jpg"},
-        {"name": "Arthur Bada", "img": "bada.jpg"},
-        {"name": "Matuti", "img": "matuti.jpg"},
-        {"name": "Kipre Junior", "img": "Kipre.jpg"},
-        {"name": "Ben Hamouda", "img": "benhamouda.jpg"}
+        {"name": "Che Malone (USMA)", "img": "malone.jpg"},
+        {"name": "Arthur Bada (JSK)", "img": "bada.jpg"},
+        {"name": "Matuti (USMK)", "img": "matuti.jpg"},
+        {"name": "Kipre Junior (MCA)", "img": "Kipre.jpg"},
+        {"name": "Mohamed Ali Ben Hamouda (CRB)", "img": "benhamouda.jpg"}
     ]
 }
 
@@ -101,20 +107,16 @@ def connect_sheet():
 
 sheet = connect_sheet()
 
-# ---------------------------------------------------
-# CACHE DATA
-# ---------------------------------------------------
 @st.cache_data(ttl=60)
 def load_data():
     return sheet.get_all_records()
 
 # ---------------------------------------------------
-# SAVE VOTE (OPTIMISÉ)
+# SAVE VOTE
 # ---------------------------------------------------
 def save_vote(nom, tel, email, media, votes):
     try:
-        data = load_data()
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(load_data())
 
         nom_clean = nom.strip().lower()
         tel_clean = clean_phone(tel)
@@ -148,29 +150,27 @@ def save_vote(nom, tel, email, media, votes):
                 ])
 
         sheet.append_rows(rows)
-
-        load_data.clear()  # refresh cache
+        load_data.clear()
 
         return True
 
     except Exception:
-        st.error("⚠️ Erreur serveur, réessayez dans quelques secondes")
+        st.error("⚠️ Erreur serveur, réessayez")
         return False
 
 # ---------------------------------------------------
 # RESULTS
 # ---------------------------------------------------
 def show_results():
-    data = load_data()
+    df = pd.DataFrame(load_data())
 
-    if not data:
+    if df.empty:
         st.warning("Pas encore de résultats")
         return
 
-    df = pd.DataFrame(data)
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
-
     df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
+
     st.markdown(f"### 👥 Nombre de votants : {df['Téléphone'].nunique()}")
 
     for cat, participants in categories.items():
@@ -185,8 +185,8 @@ def show_results():
             .sort_values(by="Points", ascending=False)
         )
 
-        top3 = df_cat.head(3)
         cols = st.columns(3)
+        top3 = df_cat.head(3)
 
         for i, (_, row) in enumerate(top3.iterrows()):
             name = row["Candidat"]
@@ -195,7 +195,7 @@ def show_results():
             img = next((p["img"] for p in participants if p["name"] == name), "default.jpg")
 
             with cols[i]:
-                st.image(f"Assets/{img}", width=120)
+                safe_image(f"Assets/{img}", 120)
                 st.markdown(f"**#{i+1} {name}**")
                 st.write(f"{pts} points")
 
@@ -231,7 +231,7 @@ if st.session_state.page == "vote":
 
                 col1, col2 = st.columns([1, 5])
                 with col1:
-                    st.image(f"Assets/{img}", width=80)
+                    safe_image(f"Assets/{img}", 80)
                 with col2:
                     st.write(choice)
 
