@@ -262,7 +262,7 @@ if st.session_state.page == "admin":
 
     password = st.text_input("Mot de passe", type="password")
 
-    if password == "DzBest2026!":
+    if password == "123455":
         show_results()
 
     elif password != "":
