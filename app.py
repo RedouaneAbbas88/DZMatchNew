@@ -276,7 +276,7 @@ if st.session_state.page == "admin":
 
     password = st.text_input("Mot de passe", type="password")
 
-    if password == "123455":
+    if password == "123456":
         show_results()
 
     elif password != "":
