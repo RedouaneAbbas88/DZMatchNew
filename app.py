@@ -120,7 +120,6 @@ def save_vote(nom, tel, email, media, votes):
 
         tel_clean = clean_phone(tel)
 
-        # Anti double vote uniquement par téléphone
         if not df.empty:
             df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
 
@@ -164,7 +163,6 @@ def show_results():
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
     df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
 
-    # Nombre réel de votants
     df_valid = df[df["Téléphone"].str.len() == 10]
     nb_votants = df_valid["Téléphone"].drop_duplicates().count()
 
@@ -182,7 +180,8 @@ def show_results():
             .sort_values(by="Points", ascending=False)
         )
 
-        df_cat = df_cat.reset_index(drop=True)
+        # ✅ MODIFICATION UNIQUEMENT ICI → TOP 5
+        df_cat = df_cat.head(5).reset_index(drop=True)
         df_cat.index = df_cat.index + 1
 
         cols = st.columns(3)
