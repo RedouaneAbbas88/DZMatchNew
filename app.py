@@ -11,7 +11,7 @@ st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
 # ---------------------------------------------------
 # HEADER LOGO
 # ---------------------------------------------------
-col1, col2 = st.columns([1, 6])
+col1, col2 = st.columns([2, 5])
 
 with col1:
     st.image("Assets/logo.PNG", width=300)
