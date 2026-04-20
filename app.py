@@ -278,4 +278,4 @@ if st.session_state.page == "admin":
         show_results()
 
     elif password != "":
-        st.error("Mot de passe incorrect")
+        st.error("Mot de passe incorrect") 
