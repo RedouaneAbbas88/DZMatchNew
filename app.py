@@ -78,7 +78,7 @@ categories = {
         {"name": "MCA", "img": "MCA.jpg"},
         {"name": "USMA", "img": "USMA.jpg"},
         {"name": "MCO", "img": "MCO.jpg"},
-        {"name": "JSS", "img": "JSK.jpg"},
+        {"name": "JSS", "img": "JSS.jpg"},
         {"name": "CRB", "img": "CRB.jpg"},
         {"name": "JSK", "img": "JSK.jpg"},
         {"name": "O. AKBOU", "img": "akbou.jpg"},
