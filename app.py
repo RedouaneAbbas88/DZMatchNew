@@ -118,20 +118,13 @@ def save_vote(nom, tel, email, media, votes):
     try:
         df = pd.DataFrame(load_data())
 
-        nom_clean = nom.strip().lower()
         tel_clean = clean_phone(tel)
-        email_clean = email.strip().lower()
 
+        # Anti double vote uniquement par téléphone
         if not df.empty:
-            df["Nom"] = df["Nom"].astype(str).str.lower()
             df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
-            df["Email"] = df["Email"].astype(str).str.lower()
 
-            if (
-                (df["Nom"] == nom_clean).any()
-                or (df["Téléphone"] == tel_clean).any()
-                or (email_clean and (df["Email"] == email_clean).any())
-            ):
+            if (df["Téléphone"] == tel_clean).any():
                 return False
 
         rows = []
@@ -171,7 +164,11 @@ def show_results():
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
     df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
 
-    st.markdown(f"### 👥 Nombre de votants : {df['Téléphone'].nunique()}")
+    # Nombre réel de votants
+    df_valid = df[df["Téléphone"].str.len() == 10]
+    nb_votants = df_valid["Téléphone"].drop_duplicates().count()
+
+    st.markdown(f"### 👥 Nombre de votants : {nb_votants}")
 
     for cat, participants in categories.items():
 
@@ -184,6 +181,9 @@ def show_results():
             .reset_index()
             .sort_values(by="Points", ascending=False)
         )
+
+        df_cat = df_cat.reset_index(drop=True)
+        df_cat.index = df_cat.index + 1
 
         cols = st.columns(3)
         top3 = df_cat.head(3)
@@ -258,7 +258,7 @@ if st.session_state.page == "vote":
                 st.session_state.page = "results"
                 st.rerun()
             else:
-                st.error("❌ Vous avez déjà voté")
+                st.error("❌ Ce numéro a déjà voté")
 
 # ---------------------------------------------------
 # RESULTS PAGE
