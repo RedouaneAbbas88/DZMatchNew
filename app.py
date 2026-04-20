@@ -9,7 +9,7 @@ from google.oauth2.service_account import Credentials
 st.set_page_config(page_title="DZBEST 2025/2026", layout="wide")
 
 # ---------------------------------------------------
-# HEADER LOGO
+# HEADER LOGO CENTRÉ
 # ---------------------------------------------------
 col1, col2, col3 = st.columns([1, 2, 1])
 
@@ -153,6 +153,11 @@ def show_results():
     df = pd.DataFrame(data)
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
 
+    # ✅ AJOUT : Nombre de votants uniques (par téléphone)
+    df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
+    nb_votants = df["Téléphone"].nunique()
+    st.markdown(f"### 👥 Nombre de votants : {nb_votants}")
+
     for cat, participants in categories.items():
 
         st.subheader(f"🏅 {cat}")
@@ -257,7 +262,7 @@ if st.session_state.page == "admin":
 
     password = st.text_input("Mot de passe", type="password")
 
-    if password == "123455":
+    if password == "DzBest2026!":
         show_results()
 
     elif password != "":
