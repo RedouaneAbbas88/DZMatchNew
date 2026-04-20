@@ -163,8 +163,7 @@ def show_results():
     df["Points"] = pd.to_numeric(df["Points"], errors="coerce")
     df["Téléphone"] = df["Téléphone"].astype(str).apply(clean_phone)
 
-    # ✅ SEULE MODIFICATION ICI (CORRECTION COMPTE VOTANTS)
-    nb_votants = df[df["Téléphone"].str.len() > 0]["Téléphone"].nunique()
+    nb_votants = df["Téléphone"].nunique()
 
     st.markdown(f"### 👥 Nombre de votants : {nb_votants}")
 
@@ -183,10 +182,11 @@ def show_results():
         df_cat = df_cat.reset_index(drop=True)
         df_cat.index = df_cat.index + 1
 
-        cols = st.columns(3)
-        top3 = df_cat.head(3)
+        # 🔥 TOP 5 UNIQUEMENT
+        cols = st.columns(5)
+        top5 = df_cat.head(5)
 
-        for i, (_, row) in enumerate(top3.iterrows()):
+        for i, (_, row) in enumerate(top5.iterrows()):
             name = row["Candidat"]
             pts = row["Points"]
 
