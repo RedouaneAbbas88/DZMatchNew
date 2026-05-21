@@ -38,7 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE LOAD DATA (ANTI CRASH TOTAL)
+# SAFE LOAD DATA
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -48,26 +48,19 @@ def load_data():
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
 
-    # ---------------------------
-    # INVENTAIRE SAFE LOAD
-    # ---------------------------
-
     raw = sheets["inventaire"].get_all_records()
     inv_df = pd.DataFrame(raw)
 
     required_cols = [
         "DATE","ID_USER","USERS","ID_Dist","DISTRIBUTEUR",
-        "CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
+        "MARQUE","CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
-    # 🔥 SI VIDE
     if inv_df.empty:
         inv_df = pd.DataFrame(columns=required_cols)
 
-    # 🔥 SAFE COLUMNS CLEAN
     inv_df.columns = [str(c).strip() for c in inv_df.columns]
 
-    # 🔥 FORCE COLS
     for c in required_cols:
         if c not in inv_df.columns:
             inv_df[c] = ""
@@ -122,7 +115,7 @@ else:
     st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
-    # AJOUT
+    # AJOUT PRODUIT
     # ===================================================
 
     st.subheader("➕ Ajouter produit")
@@ -133,10 +126,20 @@ else:
         dist_df["Distributeur"] == dist
     ]["ID_Dist"].iloc[0]
 
-    cat = st.selectbox("Catégorie", sku_df["CATEGORIE"].dropna().unique())
+    # ============================
+    # 🔥 AJOUT MARQUE (NEW)
+    # ============================
+
+    marque = st.selectbox("Marque", sku_df["MARQUE"].dropna().unique())
+
+    cat = st.selectbox(
+        "Catégorie",
+        sku_df[sku_df["MARQUE"] == marque]["CATEGORIE"].dropna().unique()
+    )
 
     produits = sku_df[
-        sku_df["CATEGORIE"] == cat
+        (sku_df["MARQUE"] == marque) &
+        (sku_df["CATEGORIE"] == cat)
     ]["ID"].dropna().unique()
 
     prod = st.selectbox("Produit", produits)
@@ -144,12 +147,12 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # ADD ROW SAFE
+    # ADD ROW SAFE (MODIF UNIQUEMENT ICI)
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
 
-        value = qty * 0  # si pas de prix dans cette version
+        value = qty * 0
 
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -157,6 +160,7 @@ else:
             st.session_state.user,
             id_dist,
             dist,
+            marque,        # 🔥 AJOUT MARQUE
             cat,
             prod,
             qty,
@@ -184,17 +188,13 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
-    # ---------------------------------------------------
-    # SAFE STATUS CHECK
-    # ---------------------------------------------------
-
     draft_exists = (user_data["STATUS"] == "DRAFT").any()
     final_only = (user_data["STATUS"] == "FINAL").all()
 
     is_locked = final_only and not draft_exists
 
     # ===================================================
-    # DISPLAY
+    # DISPLAY + EDIT (UNCHANGED)
     # ===================================================
 
     if is_locked:
@@ -227,7 +227,7 @@ else:
             st.rerun()
 
         # ---------------------------------------------------
-        # FINALISATION
+        # FINALISATION (UNCHANGED)
         # ---------------------------------------------------
 
         st.subheader("🚀 ENVOI FINAL")
@@ -239,7 +239,7 @@ else:
             for i, _ in rows.iterrows():
 
                 sheets["inventaire"].update(
-                    f"J{i+2}",
+                    f"K{i+2}",
                     [["FINAL"]]
                 )
 
