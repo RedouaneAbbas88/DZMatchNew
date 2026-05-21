@@ -13,7 +13,7 @@ st.set_page_config(page_title="Inventaire PRO", layout="wide")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# CONNECT SHEETS
+# GOOGLE CONNECT
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -85,10 +85,10 @@ if not st.session_state.logged:
 
     st.title("🔐 Connexion")
 
-    user = st.text_input("User")
-    pwd = st.text_input("Password", type="password")
+    user = st.text_input("Utilisateur")
+    pwd = st.text_input("Mot de passe", type="password")
 
-    if st.button("Login"):
+    if st.button("Connexion"):
 
         check = users_df[
             (users_df["ID_USER"].astype(str) == str(user)) &
@@ -112,10 +112,10 @@ else:
     st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
-    # 1. AJOUT DRAFT
+    # 1. AJOUT PRODUIT
     # ===================================================
 
-    st.subheader("➕ Ajout produit (DRAFT)")
+    st.subheader("➕ Ajouter produit")
 
     dist = st.selectbox("Distributeur", dist_df["Distributeur"].dropna().unique())
 
@@ -163,75 +163,55 @@ else:
         st.rerun()
 
     # ===================================================
-    # 2. HISTORIQUE + EDIT (AVANT FINAL)
+    # 2. HISTORIQUE READ ONLY (IMPORTANT)
     # ===================================================
 
-    st.subheader("📊 Historique (modifiable avant FINAL)")
+    st.subheader("📊 Historique (lecture seule)")
 
     user_data = inv_df[
         inv_df["ID_USER"].astype(str) == str(st.session_state.user)
     ].copy()
 
-    draft_data = user_data[user_data["STATUS"] == "DRAFT"].copy()
-
-    if not draft_data.empty:
-
-        draft_data = draft_data.reset_index()
-
-        edited = st.data_editor(
-            draft_data,
-            use_container_width=True,
-            num_rows="dynamic"
-        )
-
-        if st.button("💾 Sauvegarder modifications"):
-
-            for _, row in edited.iterrows():
-
-                sheet_row = row["index"] + 2
-
-                sheets["inventaire"].update(
-                    f"H{sheet_row}:I{sheet_row}",
-                    [[row["QTY"], row["VALUE"]]]
-                )
-
-            load_data.clear()
-            st.success("Modifications enregistrées")
-            st.rerun()
-
-    else:
-        st.info("Aucun brouillon")
+    st.dataframe(
+        user_data,
+        use_container_width=True
+    )
 
     # ===================================================
-    # 3. ENVOI FINAL (LOCK EVERYTHING)
+    # 3. FINALISATION (APRES HISTORIQUE)
     # ===================================================
 
     st.subheader("🚀 Validation finale")
 
-    if st.button("ENVOI FINAL"):
+    draft_data = user_data[user_data["STATUS"] == "DRAFT"]
 
-        final_rows = user_data[user_data["STATUS"] == "DRAFT"].copy()
-        final_rows = final_rows.reset_index()
+    if len(draft_data) > 0:
 
-        for _, row in final_rows.iterrows():
+        if st.button("ENVOI FINAL"):
 
-            sheet_row = row["index"] + 2
+            draft_data = draft_data.reset_index()
 
-            sheets["inventaire"].update(
-                f"J{sheet_row}",
-                [["FINAL"]]
-            )
+            for _, row in draft_data.iterrows():
 
-        load_data.clear()
+                sheet_row = row["index"] + 2
 
-        st.success("✔ Inventaire verrouillé (plus de modification possible)")
-        st.rerun()
+                sheets["inventaire"].update(
+                    f"J{sheet_row}",
+                    [["FINAL"]]
+                )
+
+            load_data.clear()
+
+            st.success("✔ Inventaire verrouillé (non modifiable)")
+            st.rerun()
+
+    else:
+        st.info("Aucune donnée à valider")
 
     # ===================================================
-    # 4. HISTORIQUE COMPLET
+    # 4. MODE VERROUILLÉ
     # ===================================================
 
-    st.markdown("---")
-    st.subheader("📋 Historique complet")
+    if len(user_data[user_data["STATUS"] == "FINAL"]) > 0:
 
-    st.dataframe(user_data, use_container_width=True)
+        st.error("🔒 Inventaire déjà validé - modification impossible")
