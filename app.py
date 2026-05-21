@@ -13,7 +13,7 @@ st.set_page_config(page_title="Inventaire SAFE PRO", layout="wide")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# CONNECT GOOGLE SHEETS
+# GOOGLE SHEETS
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -38,7 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE LOAD (WITH REAL SHEET ROW INDEX)
+# SAFE LOAD DATA
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -56,7 +56,6 @@ def load_data():
         "MARQUE","CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
-    # si vide
     if inv_df.empty:
         inv_df = pd.DataFrame(columns=required_cols)
 
@@ -66,8 +65,8 @@ def load_data():
         if c not in inv_df.columns:
             inv_df[c] = ""
 
-    # 🔥 IMPORTANT : vraie ligne Google Sheet
-    inv_df["_row"] = range(2, len(inv_df) + 2)
+    # 🔥 FIX MINIMAL (IMPORTANT)
+    inv_df["_row"] = list(range(2, len(inv_df) + 2))
 
     return sku_df, users_df, dist_df, inv_df
 
@@ -75,7 +74,7 @@ def load_data():
 sku_df, users_df, dist_df, inv_df = load_data()
 
 # ---------------------------------------------------
-# SESSION
+# LOGIN
 # ---------------------------------------------------
 
 if "logged" not in st.session_state:
@@ -84,13 +83,9 @@ if "logged" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = ""
 
-# ---------------------------------------------------
-# LOGIN
-# ---------------------------------------------------
-
 if not st.session_state.logged:
 
-    st.title("🔐 LOGIN")
+    st.title("🔐 LOGIN SAFE")
 
     user = st.text_input("User")
     pwd = st.text_input("Password", type="password")
@@ -130,7 +125,7 @@ else:
         dist_df["Distributeur"] == dist
     ]["ID_Dist"].iloc[0]
 
-    # MARQUE (AJOUT)
+    # 🔥 MARQUE AJOUTÉE
     marque = st.selectbox("Marque", sku_df["MARQUE"].dropna().unique())
 
     cat = st.selectbox(
@@ -147,11 +142,9 @@ else:
 
     qty = st.number_input("Quantité", min_value=0, step=1)
 
-    # ---------------------------------------------------
-    # INSERT ROW
-    # ---------------------------------------------------
-
     if st.button("Ajouter"):
+
+        value = qty * 0
 
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -163,7 +156,7 @@ else:
             cat,
             prod,
             qty,
-            qty * 0,
+            value,
             "DRAFT"
         ]
 
@@ -187,14 +180,13 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
-    # display
     st.dataframe(
         user_data[["MARQUE","CATEGORIE","ID_Produit","QTY","STATUS"]],
         use_container_width=True
     )
 
     # ===================================================
-    # EDIT + SAVE (NO SHIFT FIXED)
+    # EDIT + SAVE
     # ===================================================
 
     st.subheader("✏ Modifier")
@@ -224,7 +216,7 @@ else:
         st.rerun()
 
     # ===================================================
-    # FINALISATION (NO SHIFT FIXED)
+    # FINALISATION
     # ===================================================
 
     st.subheader("🚀 FINALISER")
