@@ -47,6 +47,7 @@ def load_data():
     sku_df = pd.DataFrame(sheets["sku"].get_all_records())
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
+    price_df = pd.DataFrame(sheets["price"].get_all_records())   # ✅ AJOUT
 
     raw = sheets["inventaire"].get_all_records()
     inv_df = pd.DataFrame(raw)
@@ -65,10 +66,21 @@ def load_data():
         if c not in inv_df.columns:
             inv_df[c] = ""
 
-    return sku_df, users_df, dist_df, inv_df
+    return sku_df, users_df, dist_df, price_df, inv_df   # ✅ AJOUT
 
 
-sku_df, users_df, dist_df, inv_df = load_data()
+sku_df, users_df, dist_df, price_df, inv_df = load_data()
+
+# ---------------------------------------------------
+# PRICE DICT (AJOUT MINIMAL)
+# ---------------------------------------------------
+
+price_dict = dict(
+    zip(
+        price_df["ID"].astype(str),
+        price_df["Prix_Distributeur"]
+    )
+)
 
 # ---------------------------------------------------
 # SESSION
@@ -147,7 +159,9 @@ else:
 
     if st.button("Ajouter"):
 
-        value = qty * 0
+        # ✅ MODIF ICI UNIQUEMENT
+        price = float(price_dict.get(str(prod), 0))
+        value = qty * price
 
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -177,7 +191,7 @@ else:
         st.rerun()
 
     # ===================================================
-    # TABLE (MODIF ICI UNIQUEMENT)
+    # TABLE
     # ===================================================
 
     st.subheader("📊 Inventaire")
@@ -190,7 +204,6 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
-    # 🔥 MODIF UNIQUEMENT ICI : colonnes affichées
     user_data = user_data[
         ["DATE", "DISTRIBUTEUR", "MARQUE", "CATEGORIE", "ID_Produit", "QTY", "STATUS"]
     ]
@@ -199,8 +212,13 @@ else:
 
     if st.button("💾 Sauvegarder"):
         for i, row in edited.iterrows():
+
+            # ✅ MODIF ICI UNIQUEMENT
             qty = float(row["QTY"]) if row["QTY"] != "" else 0
-            value = qty * 0
+            prod_id = str(row["ID_Produit"])
+
+            price = float(price_dict.get(prod_id, 0))
+            value = qty * price
 
             sheets["inventaire"].update(
                 f"I{i+2}:K{i+2}",
