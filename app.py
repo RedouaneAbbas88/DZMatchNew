@@ -41,7 +41,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# CLEAN
+# SAFE CLEAN
 # ---------------------------------------------------
 
 def clean(v):
@@ -50,7 +50,29 @@ def clean(v):
     return str(v)
 
 # ---------------------------------------------------
-# LOAD DATA
+# SAFE PRICE FUNCTION (IMPORTANT FIX)
+# ---------------------------------------------------
+
+def get_price(prod_id, price_df):
+
+    prix_row = price_df[price_df["ID"].astype(str) == str(prod_id)]
+
+    if prix_row.empty:
+        return 0
+
+    try:
+        val = prix_row.iloc[0]["Prix_Distributeur"]
+
+        if pd.isna(val) or val == "":
+            return 0
+
+        return float(str(val).replace(",", ".").strip())
+
+    except:
+        return 0
+
+# ---------------------------------------------------
+# LOAD DATA SAFE
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -61,7 +83,22 @@ def load_data():
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
     price_df = pd.DataFrame(sheets["price"].get_all_records())
 
-    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
+    inv_raw = sheets["inventaire"].get_all_values()
+
+    columns = [
+        "DATE","ID_USER","USERS","ID_Dist",
+        "DISTRIBUTEUR","CATEGORIE","ID_Produit",
+        "QTY","VALUE","STATUS"
+    ]
+
+    if len(inv_raw) == 0 or len(inv_raw[0]) == 0:
+        inv_df = pd.DataFrame(columns=columns)
+    else:
+        headers = [h.strip() for h in inv_raw[0]]
+        rows = inv_raw[1:]
+        inv_df = pd.DataFrame(rows, columns=headers)
+
+    inv_df.columns = inv_df.columns.str.strip()
 
     if "STATUS" not in inv_df.columns:
         inv_df["STATUS"] = "DRAFT"
@@ -72,7 +109,7 @@ def load_data():
 sku_df, users_df, dist_df, price_df, inv_df = load_data()
 
 # ---------------------------------------------------
-# LOGIN
+# SESSION
 # ---------------------------------------------------
 
 if "logged" not in st.session_state:
@@ -80,6 +117,10 @@ if "logged" not in st.session_state:
 
 if "user" not in st.session_state:
     st.session_state.user = ""
+
+# ---------------------------------------------------
+# LOGIN
+# ---------------------------------------------------
 
 if not st.session_state.logged:
 
@@ -109,11 +150,22 @@ if not st.session_state.logged:
 else:
 
     st.title("📦 Inventaire PRO")
-    st.write("Utilisateur :", st.session_state.user)
+    st.write("👤 Utilisateur :", st.session_state.user)
 
-    # ===================================================
-    # 1. AJOUT PRODUIT
-    # ===================================================
+    # ---------------------------------------------------
+    # USER DATA
+    # ---------------------------------------------------
+
+    user_data = inv_df[
+        inv_df["ID_USER"].astype(str) == str(st.session_state.user)
+    ].copy()
+
+    if "STATUS" not in user_data.columns:
+        user_data["STATUS"] = "DRAFT"
+
+    # ---------------------------------------------------
+    # ADD PRODUCT
+    # ---------------------------------------------------
 
     st.subheader("➕ Ajouter produit")
 
@@ -135,14 +187,7 @@ else:
 
     if st.button("Ajouter"):
 
-        prix_row = price_df[
-            price_df["ID"].astype(str) == str(prod)
-        ]
-
-        prix = 0
-        if not prix_row.empty:
-            prix = float(prix_row.iloc[0]["Prix_Distributeur"])
-
+        prix = get_price(prod, price_df)
         value = qty * prix
 
         sheets["inventaire"].append_row([
@@ -153,7 +198,7 @@ else:
             dist,
             cat,
             prod,
-            qty,
+            int(qty),
             value,
             "DRAFT"
         ])
@@ -162,24 +207,17 @@ else:
         st.success("Ajouté en DRAFT")
         st.rerun()
 
-    # ===================================================
-    # 2. HISTORIQUE READ ONLY (IMPORTANT)
-    # ===================================================
+    # ---------------------------------------------------
+    # HISTORIQUE READ ONLY
+    # ---------------------------------------------------
 
     st.subheader("📊 Historique (lecture seule)")
 
-    user_data = inv_df[
-        inv_df["ID_USER"].astype(str) == str(st.session_state.user)
-    ].copy()
+    st.dataframe(user_data, use_container_width=True)
 
-    st.dataframe(
-        user_data,
-        use_container_width=True
-    )
-
-    # ===================================================
-    # 3. FINALISATION (APRES HISTORIQUE)
-    # ===================================================
+    # ---------------------------------------------------
+    # FINAL BUTTON (AFTER TABLE)
+    # ---------------------------------------------------
 
     st.subheader("🚀 Validation finale")
 
@@ -206,12 +244,11 @@ else:
             st.rerun()
 
     else:
-        st.info("Aucune donnée à valider")
+        st.info("Aucune donnée DRAFT")
 
-    # ===================================================
-    # 4. MODE VERROUILLÉ
-    # ===================================================
+    # ---------------------------------------------------
+    # LOCK MESSAGE
+    # ---------------------------------------------------
 
     if len(user_data[user_data["STATUS"] == "FINAL"]) > 0:
-
         st.error("🔒 Inventaire déjà validé - modification impossible")
