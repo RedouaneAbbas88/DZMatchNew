@@ -13,7 +13,7 @@ st.set_page_config(page_title="Inventaire PRO", layout="wide")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# GOOGLE SHEETS CONNECTION
+# CONNECT SHEETS
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -41,7 +41,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# CLEAN FUNCTION
+# CLEAN
 # ---------------------------------------------------
 
 def clean(v):
@@ -50,7 +50,7 @@ def clean(v):
     return str(v)
 
 # ---------------------------------------------------
-# LOAD DATA SAFE (IMPORTANT FIX STATUS)
+# LOAD DATA
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -61,43 +61,10 @@ def load_data():
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
     price_df = pd.DataFrame(sheets["price"].get_all_records())
 
-    # ---------------- INVENTAIRE SAFE ----------------
-    inv_raw = sheets["inventaire"].get_all_values()
+    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
 
-    columns = [
-        "DATE","ID_USER","USERS","ID_Dist",
-        "DISTRIBUTEUR","CATEGORIE","ID_Produit",
-        "QTY","VALUE","STATUS"
-    ]
-
-    if len(inv_raw) == 0 or len(inv_raw[0]) == 0:
-        inv_df = pd.DataFrame(columns=columns)
-
-    else:
-        headers = [h.strip() for h in inv_raw[0]]
-        rows = inv_raw[1:]
-
-        inv_df = pd.DataFrame(rows, columns=headers)
-
-    # clean columns
-    inv_df.columns = inv_df.columns.str.strip()
-
-    # 🔥 IMPORTANT FIX: STATUS ALWAYS EXISTS
     if "STATUS" not in inv_df.columns:
         inv_df["STATUS"] = "DRAFT"
-
-    # ---------------- PRICE CLEAN ----------------
-    if not price_df.empty:
-        price_df["Prix_Distributeur"] = (
-            price_df["Prix_Distributeur"]
-            .astype(str)
-            .str.replace(",", ".")
-        )
-
-        price_df["Prix_Distributeur"] = pd.to_numeric(
-            price_df["Prix_Distributeur"],
-            errors="coerce"
-        ).fillna(0)
 
     return sku_df, users_df, dist_df, price_df, inv_df
 
@@ -105,7 +72,7 @@ def load_data():
 sku_df, users_df, dist_df, price_df, inv_df = load_data()
 
 # ---------------------------------------------------
-# SESSION
+# LOGIN
 # ---------------------------------------------------
 
 if "logged" not in st.session_state:
@@ -114,18 +81,14 @@ if "logged" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = ""
 
-# ---------------------------------------------------
-# LOGIN
-# ---------------------------------------------------
-
 if not st.session_state.logged:
 
     st.title("🔐 Connexion")
 
-    user = st.text_input("Utilisateur")
-    pwd = st.text_input("Mot de passe", type="password")
+    user = st.text_input("User")
+    pwd = st.text_input("Password", type="password")
 
-    if st.button("Connexion"):
+    if st.button("Login"):
 
         check = users_df[
             (users_df["ID_USER"].astype(str) == str(user)) &
@@ -146,24 +109,13 @@ if not st.session_state.logged:
 else:
 
     st.title("📦 Inventaire PRO")
-    st.write("👤 Utilisateur :", st.session_state.user)
+    st.write("Utilisateur :", st.session_state.user)
 
-    # ---------------------------------------------------
-    # USER DATA
-    # ---------------------------------------------------
+    # ===================================================
+    # 1. AJOUT DRAFT
+    # ===================================================
 
-    user_data = inv_df[
-        inv_df["ID_USER"].astype(str) == str(st.session_state.user)
-    ].copy()
-
-    if "STATUS" not in user_data.columns:
-        user_data["STATUS"] = "DRAFT"
-
-    # ---------------------------------------------------
-    # ADD PRODUCT (DRAFT DIRECT)
-    # ---------------------------------------------------
-
-    st.subheader("➕ Ajouter produit")
+    st.subheader("➕ Ajout produit (DRAFT)")
 
     dist = st.selectbox("Distributeur", dist_df["Distributeur"].dropna().unique())
 
@@ -181,7 +133,7 @@ else:
 
     qty = st.number_input("Quantité", min_value=0, step=1)
 
-    if st.button("Valider quantité"):
+    if st.button("Ajouter"):
 
         prix_row = price_df[
             price_df["ID"].astype(str) == str(prod)
@@ -189,12 +141,9 @@ else:
 
         prix = 0
         if not prix_row.empty:
-            try:
-                prix = float(prix_row.iloc[0]["Prix_Distributeur"])
-            except:
-                prix = 0
+            prix = float(prix_row.iloc[0]["Prix_Distributeur"])
 
-        value = int(qty) * prix
+        value = qty * prix
 
         sheets["inventaire"].append_row([
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -204,30 +153,33 @@ else:
             dist,
             cat,
             prod,
-            int(qty),
+            qty,
             value,
             "DRAFT"
         ])
 
         load_data.clear()
-
         st.success("Ajouté en DRAFT")
         st.rerun()
 
-    # ---------------------------------------------------
-    # EDITABLE TABLE (DRAFT ONLY)
-    # ---------------------------------------------------
+    # ===================================================
+    # 2. HISTORIQUE + EDIT (AVANT FINAL)
+    # ===================================================
 
-    st.subheader("📊 Historique modifiable")
+    st.subheader("📊 Historique (modifiable avant FINAL)")
 
-    editable = user_data[user_data["STATUS"] == "DRAFT"].copy()
+    user_data = inv_df[
+        inv_df["ID_USER"].astype(str) == str(st.session_state.user)
+    ].copy()
 
-    if not editable.empty:
+    draft_data = user_data[user_data["STATUS"] == "DRAFT"].copy()
 
-        editable = editable.reset_index()
+    if not draft_data.empty:
+
+        draft_data = draft_data.reset_index()
 
         edited = st.data_editor(
-            editable,
+            draft_data,
             use_container_width=True,
             num_rows="dynamic"
         )
@@ -244,18 +196,19 @@ else:
                 )
 
             load_data.clear()
-
             st.success("Modifications enregistrées")
             st.rerun()
 
     else:
-        st.info("Aucun DRAFT")
+        st.info("Aucun brouillon")
 
-    # ---------------------------------------------------
-    # FINALISATION (FIX STATUS ERROR)
-    # ---------------------------------------------------
+    # ===================================================
+    # 3. ENVOI FINAL (LOCK EVERYTHING)
+    # ===================================================
 
-    if st.button("🚀 ENVOI FINAL"):
+    st.subheader("🚀 Validation finale")
+
+    if st.button("ENVOI FINAL"):
 
         final_rows = user_data[user_data["STATUS"] == "DRAFT"].copy()
         final_rows = final_rows.reset_index()
@@ -271,12 +224,12 @@ else:
 
         load_data.clear()
 
-        st.success("Inventaire verrouillé")
+        st.success("✔ Inventaire verrouillé (plus de modification possible)")
         st.rerun()
 
-    # ---------------------------------------------------
-    # HISTORY
-    # ---------------------------------------------------
+    # ===================================================
+    # 4. HISTORIQUE COMPLET
+    # ===================================================
 
     st.markdown("---")
     st.subheader("📋 Historique complet")
