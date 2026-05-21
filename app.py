@@ -13,7 +13,7 @@ st.set_page_config(page_title="Inventaire SAFE PRO", layout="wide")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# GOOGLE SHEETS
+# CONNECT GOOGLE SHEETS
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -38,7 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE LOAD DATA
+# SAFE LOAD (WITH REAL SHEET ROW INDEX)
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -56,6 +56,7 @@ def load_data():
         "MARQUE","CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
+    # si vide
     if inv_df.empty:
         inv_df = pd.DataFrame(columns=required_cols)
 
@@ -64,6 +65,9 @@ def load_data():
     for c in required_cols:
         if c not in inv_df.columns:
             inv_df[c] = ""
+
+    # 🔥 IMPORTANT : vraie ligne Google Sheet
+    inv_df["_row"] = range(2, len(inv_df) + 2)
 
     return sku_df, users_df, dist_df, inv_df
 
@@ -86,7 +90,7 @@ if "user" not in st.session_state:
 
 if not st.session_state.logged:
 
-    st.title("🔐 LOGIN SAFE")
+    st.title("🔐 LOGIN")
 
     user = st.text_input("User")
     pwd = st.text_input("Password", type="password")
@@ -126,10 +130,7 @@ else:
         dist_df["Distributeur"] == dist
     ]["ID_Dist"].iloc[0]
 
-    # ============================
-    # 🔥 AJOUT MARQUE (NEW)
-    # ============================
-
+    # MARQUE (AJOUT)
     marque = st.selectbox("Marque", sku_df["MARQUE"].dropna().unique())
 
     cat = st.selectbox(
@@ -147,12 +148,10 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # ADD ROW SAFE (MODIF UNIQUEMENT ICI)
+    # INSERT ROW
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
-
-        value = qty * 0
 
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -160,11 +159,11 @@ else:
             st.session_state.user,
             id_dist,
             dist,
-            marque,        # 🔥 AJOUT MARQUE
+            marque,
             cat,
             prod,
             qty,
-            value,
+            qty * 0,
             "DRAFT"
         ]
 
@@ -175,7 +174,7 @@ else:
         st.rerun()
 
     # ===================================================
-    # TABLE SAFE
+    # TABLE
     # ===================================================
 
     st.subheader("📊 Inventaire")
@@ -188,61 +187,59 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
-    draft_exists = (user_data["STATUS"] == "DRAFT").any()
-    final_only = (user_data["STATUS"] == "FINAL").all()
-
-    is_locked = final_only and not draft_exists
+    # display
+    st.dataframe(
+        user_data[["MARQUE","CATEGORIE","ID_Produit","QTY","STATUS"]],
+        use_container_width=True
+    )
 
     # ===================================================
-    # DISPLAY + EDIT (UNCHANGED)
+    # EDIT + SAVE (NO SHIFT FIXED)
     # ===================================================
 
-    if is_locked:
+    st.subheader("✏ Modifier")
 
-        st.dataframe(user_data, use_container_width=True)
-        st.error("🔒 FINAL - verrouillé")
+    edited = st.data_editor(user_data, use_container_width=True)
 
-    else:
+    if st.button("💾 Sauvegarder"):
 
-        edited = st.data_editor(user_data, use_container_width=True)
+        for _, row in edited.iterrows():
 
-        if st.button("💾 Sauvegarder"):
+            sheet_row = int(row["_row"])
 
-            for i, row in edited.iterrows():
+            try:
+                qty = float(row["QTY"])
+            except:
+                qty = 0
 
-                try:
-                    qty = float(row["QTY"]) if row["QTY"] != "" else 0
-                except:
-                    qty = 0
+            value = qty * 0
 
-                value = qty * 0
+            sheets["inventaire"].update(
+                f"I{sheet_row}:K{sheet_row}",
+                [[qty, value, row["STATUS"]]]
+            )
 
-                sheets["inventaire"].update(
-                    f"H{i+2}:J{i+2}",
-                    [[qty, value, row["STATUS"]]]
-                )
+        load_data.clear()
+        st.success("Modifications sauvegardées")
+        st.rerun()
 
-            load_data.clear()
-            st.success("Sauvegardé")
-            st.rerun()
+    # ===================================================
+    # FINALISATION (NO SHIFT FIXED)
+    # ===================================================
 
-        # ---------------------------------------------------
-        # FINALISATION (UNCHANGED)
-        # ---------------------------------------------------
+    st.subheader("🚀 FINALISER")
 
-        st.subheader("🚀 ENVOI FINAL")
+    if st.button("VALIDER DEFINITIVEMENT"):
 
-        if st.button("VALIDER DEFINITIVEMENT"):
+        for _, row in user_data.iterrows():
 
-            rows = user_data[user_data["STATUS"] == "DRAFT"]
+            sheet_row = int(row["_row"])
 
-            for i, _ in rows.iterrows():
+            sheets["inventaire"].update(
+                f"K{sheet_row}",
+                [["FINAL"]]
+            )
 
-                sheets["inventaire"].update(
-                    f"K{i+2}",
-                    [["FINAL"]]
-                )
-
-            load_data.clear()
-            st.success("✔ FINAL OK")
-            st.rerun()
+        load_data.clear()
+        st.success("✔ FINAL OK")
+        st.rerun()
