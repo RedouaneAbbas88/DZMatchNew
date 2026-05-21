@@ -114,6 +114,10 @@ else:
     st.title("📦 INVENTAIRE SAFE PRO")
     st.write("Utilisateur :", st.session_state.user)
 
+    # ===================================================
+    # AJOUT PRODUIT
+    # ===================================================
+
     st.subheader("➕ Ajouter produit")
 
     dist = st.selectbox("Distributeur", dist_df["Distributeur"].dropna().unique())
@@ -138,7 +142,7 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # ADD ROW (FIX JSON ERROR)
+    # ADD ROW SAFE
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
@@ -161,7 +165,6 @@ else:
 
         next_row = len(sheets["inventaire"].get_all_values()) + 1
 
-        # ✅ FIX IMPORTANT (anti JSON error)
         clean_row = [str(x) if x is not None else "" for x in row]
 
         sheets["inventaire"].update(
@@ -173,9 +176,9 @@ else:
         st.success("Ajouté en DRAFT")
         st.rerun()
 
-    # ---------------------------------------------------
-    # TABLE
-    # ---------------------------------------------------
+    # ===================================================
+    # TABLE (MODIF ICI UNIQUEMENT)
+    # ===================================================
 
     st.subheader("📊 Inventaire")
 
@@ -186,6 +189,11 @@ else:
     if user_data.empty:
         st.info("Aucune donnée")
         st.stop()
+
+    # 🔥 MODIF UNIQUEMENT ICI : colonnes affichées
+    user_data = user_data[
+        ["DATE", "DISTRIBUTEUR", "MARQUE", "CATEGORIE", "ID_Produit", "QTY", "STATUS"]
+    ]
 
     edited = st.data_editor(user_data, use_container_width=True)
 
