@@ -168,7 +168,12 @@ else:
             "DRAFT"
         ]
 
-        sheets["inventaire"].append_row(row)
+        next_row = len(sheets["inventaire"].get_all_values()) + 1
+
+sheets["inventaire"].update(
+    f"A{next_row}:K{next_row}",
+    [row]
+)
 
         load_data.clear()
         st.success("Ajouté en DRAFT")
