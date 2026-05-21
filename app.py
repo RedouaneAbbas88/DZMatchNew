@@ -48,8 +48,7 @@ def load_data():
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
 
-    raw = sheets["inventaire"].get_all_records()
-    inv_df = pd.DataFrame(raw)
+    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
 
     required_cols = [
         "DATE","ID_USER","USERS","ID_Dist","DISTRIBUTEUR",
@@ -126,7 +125,6 @@ else:
         dist_df["Distributeur"] == dist
     ]["ID_Dist"].iloc[0]
 
-    # 🔥 MARQUE AJOUTÉE (AVANT CATEGORIE)
     marque = st.selectbox("Marque", sku_df["MARQUE"].dropna().unique())
 
     cat = st.selectbox(
@@ -143,7 +141,7 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # ADD ROW SAFE
+    # ADD ROW SAFE (FIX APPLIED HERE)
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
@@ -151,16 +149,16 @@ else:
         value = qty * 0
 
         row = [
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            st.session_state.user,
-            st.session_state.user,
-            id_dist,
-            dist,
-            marque,   # 🔥 AJOUT MARQUE
-            cat,
-            prod,
-            qty,
-            value,
+            str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            str(st.session_state.user),
+            str(st.session_state.user),
+            str(id_dist),
+            str(dist),
+            str(marque),
+            str(cat),
+            str(prod),
+            float(qty),
+            float(value),
             "DRAFT"
         ]
 
@@ -184,65 +182,47 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
-    # ---------------------------------------------------
-    # SAFE STATUS CHECK
-    # ---------------------------------------------------
+    st.dataframe(user_data, use_container_width=True)
 
-    draft_exists = (user_data["STATUS"] == "DRAFT").any()
-    final_only = (user_data["STATUS"] == "FINAL").all()
-
-    is_locked = final_only and not draft_exists
+    edited = st.data_editor(user_data, use_container_width=True)
 
     # ===================================================
-    # DISPLAY
+    # SAVE
     # ===================================================
 
-    if is_locked:
+    if st.button("💾 Sauvegarder"):
 
-        st.dataframe(user_data, use_container_width=True)
-        st.error("🔒 FINAL - verrouillé")
+        for i, row in edited.iterrows():
 
-    else:
+            qty = float(row["QTY"]) if row["QTY"] != "" else 0
+            value = qty * 0
 
-        edited = st.data_editor(user_data, use_container_width=True)
+            sheets["inventaire"].update(
+                f"I{i+2}:K{i+2}",
+                [[qty, value, row["STATUS"]]]
+            )
 
-        if st.button("💾 Sauvegarder"):
+        load_data.clear()
+        st.success("Sauvegardé")
+        st.rerun()
 
-            for i, row in edited.iterrows():
+    # ===================================================
+    # FINAL
+    # ===================================================
 
-                try:
-                    qty = float(row["QTY"]) if row["QTY"] != "" else 0
-                except:
-                    qty = 0
+    st.subheader("🚀 ENVOI FINAL")
 
-                value = qty * 0
+    if st.button("VALIDER DEFINITIVEMENT"):
 
-                sheets["inventaire"].update(
-                    f"I{i+2}:K{i+2}",
-                    [[qty, value, row["STATUS"]]]
-                )
+        rows = user_data[user_data["STATUS"] == "DRAFT"]
 
-            load_data.clear()
-            st.success("Sauvegardé")
-            st.rerun()
+        for i, _ in rows.iterrows():
 
-        # ---------------------------------------------------
-        # FINALISATION
-        # ---------------------------------------------------
+            sheets["inventaire"].update(
+                f"K{i+2}",
+                [["FINAL"]]
+            )
 
-        st.subheader("🚀 ENVOI FINAL")
-
-        if st.button("VALIDER DEFINITIVEMENT"):
-
-            rows = user_data[user_data["STATUS"] == "DRAFT"]
-
-            for i, _ in rows.iterrows():
-
-                sheets["inventaire"].update(
-                    f"K{i+2}",
-                    [["FINAL"]]
-                )
-
-            load_data.clear()
-            st.success("✔ FINAL OK")
-            st.rerun()
+        load_data.clear()
+        st.success("✔ FINAL OK")
+        st.rerun()
