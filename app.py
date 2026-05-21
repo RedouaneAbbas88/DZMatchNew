@@ -8,7 +8,7 @@ from datetime import datetime
 # CONFIG
 # ---------------------------------------------------
 
-st.set_page_config(page_title="Inventaire PRO CLEAN", layout="wide")
+st.set_page_config(page_title="Inventaire SAFE PRO", layout="wide")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -38,7 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE LOAD
+# SAFE LOAD DATA (ANTI CRASH TOTAL)
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -47,18 +47,28 @@ def load_data():
     sku_df = pd.DataFrame(sheets["sku"].get_all_records())
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
-    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
 
-    # nettoyage colonnes
-    inv_df.columns = inv_df.columns.str.strip()
+    # ---------------------------
+    # INVENTAIRE SAFE LOAD
+    # ---------------------------
 
-    # sécurité colonnes obligatoires
-    required = [
+    raw = sheets["inventaire"].get_all_records()
+    inv_df = pd.DataFrame(raw)
+
+    required_cols = [
         "DATE","ID_USER","USERS","ID_Dist","DISTRIBUTEUR",
         "CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
-    for c in required:
+    # 🔥 SI VIDE
+    if inv_df.empty:
+        inv_df = pd.DataFrame(columns=required_cols)
+
+    # 🔥 SAFE COLUMNS CLEAN
+    inv_df.columns = [str(c).strip() for c in inv_df.columns]
+
+    # 🔥 FORCE COLS
+    for c in required_cols:
         if c not in inv_df.columns:
             inv_df[c] = ""
 
@@ -83,7 +93,7 @@ if "user" not in st.session_state:
 
 if not st.session_state.logged:
 
-    st.title("🔐 LOGIN")
+    st.title("🔐 LOGIN SAFE")
 
     user = st.text_input("User")
     pwd = st.text_input("Password", type="password")
@@ -108,8 +118,8 @@ if not st.session_state.logged:
 
 else:
 
-    st.title("📦 INVENTAIRE SIMPLE & STABLE")
-    st.write("User :", st.session_state.user)
+    st.title("📦 INVENTAIRE SAFE PRO")
+    st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
     # AJOUT
@@ -134,12 +144,12 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # AJOUT LIGNE (IMPORTANT FIX)
+    # ADD ROW SAFE
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
 
-        value = qty * 0   # si tu n'as pas PRICE, sinon mets logique externe
+        value = qty * 0  # si pas de prix dans cette version
 
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -161,7 +171,7 @@ else:
         st.rerun()
 
     # ===================================================
-    # TABLE
+    # TABLE SAFE
     # ===================================================
 
     st.subheader("📊 Inventaire")
@@ -174,19 +184,23 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
+    # ---------------------------------------------------
+    # SAFE STATUS CHECK
+    # ---------------------------------------------------
+
     draft_exists = (user_data["STATUS"] == "DRAFT").any()
     final_only = (user_data["STATUS"] == "FINAL").all()
 
     is_locked = final_only and not draft_exists
 
-    # ---------------------------------------------------
-    # AFFICHAGE
-    # ---------------------------------------------------
+    # ===================================================
+    # DISPLAY
+    # ===================================================
 
     if is_locked:
 
         st.dataframe(user_data, use_container_width=True)
-        st.error("🔒 FINAL - modification impossible")
+        st.error("🔒 FINAL - verrouillé")
 
     else:
 
@@ -201,7 +215,7 @@ else:
                 except:
                     qty = 0
 
-                value = qty * 0  # pas de PRICE dans ton modèle
+                value = qty * 0
 
                 sheets["inventaire"].update(
                     f"H{i+2}:J{i+2}",
