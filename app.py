@@ -227,7 +227,7 @@ else:
         # ---------------------------------------------------
 
         st.subheader("🚀 ENVOI FINAL")
-
+if False:
         if st.button("VALIDER DEFINITIVEMENT"):
 
             rows = user_data[user_data["STATUS"] == "DRAFT"]
