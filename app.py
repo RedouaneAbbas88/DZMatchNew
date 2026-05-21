@@ -8,12 +8,12 @@ from datetime import datetime
 # CONFIG
 # ---------------------------------------------------
 
-st.set_page_config(page_title="Inventaire ROBUSTE", layout="wide")
+st.set_page_config(page_title="Inventaire PRO CLEAN", layout="wide")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# CONNECT GOOGLE SHEETS
+# GOOGLE SHEETS
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -38,27 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE PRICE FUNCTION
-# ---------------------------------------------------
-
-def get_price(prod_id, price_df):
-
-    row = price_df[price_df["ID"].astype(str) == str(prod_id)]
-
-    if row.empty:
-        return 0
-
-    val = row.iloc[0]["Prix_Distributeur"]
-
-    try:
-        if pd.isna(val) or val == "":
-            return 0
-        return float(str(val).replace(",", "."))
-    except:
-        return 0
-
-# ---------------------------------------------------
-# LOAD DATA SAFE
+# SAFE LOAD
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -67,25 +47,25 @@ def load_data():
     sku_df = pd.DataFrame(sheets["sku"].get_all_records())
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
-    price_df = pd.DataFrame(sheets["price"].get_all_records())
     inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
 
-    inv_df.columns = [c.strip() for c in inv_df.columns]
+    # nettoyage colonnes
+    inv_df.columns = inv_df.columns.str.strip()
 
-    required_cols = [
-        "DATE", "ID_USER", "USERS", "ID_Dist",
-        "DISTRIBUTEUR", "CATEGORIE", "ID_Produit",
-        "QTY", "PRICE", "VALUE", "STATUS"
+    # sécurité colonnes obligatoires
+    required = [
+        "DATE","ID_USER","USERS","ID_Dist","DISTRIBUTEUR",
+        "CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
-    for col in required_cols:
-        if col not in inv_df.columns:
-            inv_df[col] = ""
+    for c in required:
+        if c not in inv_df.columns:
+            inv_df[c] = ""
 
-    return sku_df, users_df, dist_df, price_df, inv_df
+    return sku_df, users_df, dist_df, inv_df
 
 
-sku_df, users_df, dist_df, price_df, inv_df = load_data()
+sku_df, users_df, dist_df, inv_df = load_data()
 
 # ---------------------------------------------------
 # SESSION
@@ -103,7 +83,7 @@ if "user" not in st.session_state:
 
 if not st.session_state.logged:
 
-    st.title("🔐 Connexion")
+    st.title("🔐 LOGIN")
 
     user = st.text_input("User")
     pwd = st.text_input("Password", type="password")
@@ -128,11 +108,11 @@ if not st.session_state.logged:
 
 else:
 
-    st.title("📦 INVENTAIRE PRO ROBUSTE")
-    st.write("Utilisateur :", st.session_state.user)
+    st.title("📦 INVENTAIRE SIMPLE & STABLE")
+    st.write("User :", st.session_state.user)
 
     # ===================================================
-    # AJOUT PRODUIT
+    # AJOUT
     # ===================================================
 
     st.subheader("➕ Ajouter produit")
@@ -153,13 +133,15 @@ else:
 
     qty = st.number_input("Quantité", min_value=0, step=1)
 
+    # ---------------------------------------------------
+    # AJOUT LIGNE (IMPORTANT FIX)
+    # ---------------------------------------------------
+
     if st.button("Ajouter"):
 
-        price = get_price(prod, price_df)
+        value = qty * 0   # si tu n'as pas PRICE, sinon mets logique externe
 
-        value = qty * price
-
-        sheets["inventaire"].append_row([
+        row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             st.session_state.user,
             st.session_state.user,
@@ -168,10 +150,11 @@ else:
             cat,
             prod,
             qty,
-            price,
             value,
             "DRAFT"
-        ])
+        ]
+
+        sheets["inventaire"].append_row(row)
 
         load_data.clear()
         st.success("Ajouté en DRAFT")
@@ -196,20 +179,20 @@ else:
 
     is_locked = final_only and not draft_exists
 
-    # ===================================================
+    # ---------------------------------------------------
     # AFFICHAGE
-    # ===================================================
+    # ---------------------------------------------------
 
     if is_locked:
 
         st.dataframe(user_data, use_container_width=True)
-        st.error("🔒 Inventaire FINAL verrouillé")
+        st.error("🔒 FINAL - modification impossible")
 
     else:
 
         edited = st.data_editor(user_data, use_container_width=True)
 
-        if st.button("💾 Sauvegarder modifications"):
+        if st.button("💾 Sauvegarder"):
 
             for i, row in edited.iterrows():
 
@@ -218,43 +201,34 @@ else:
                 except:
                     qty = 0
 
-                try:
-                    price = float(str(row["PRICE"]).replace(",", "."))
-                except:
-                    price = 0
-
-                value = qty * price
+                value = qty * 0  # pas de PRICE dans ton modèle
 
                 sheets["inventaire"].update(
                     f"H{i+2}:J{i+2}",
-                    [[qty, price, value]]
+                    [[qty, value, row["STATUS"]]]
                 )
 
             load_data.clear()
-            st.success("Modifications sauvegardées")
+            st.success("Sauvegardé")
             st.rerun()
 
-        # ===================================================
+        # ---------------------------------------------------
         # FINALISATION
-        # ===================================================
+        # ---------------------------------------------------
 
-        st.subheader("🚀 Envoi final")
+        st.subheader("🚀 ENVOI FINAL")
 
         if st.button("VALIDER DEFINITIVEMENT"):
 
             rows = user_data[user_data["STATUS"] == "DRAFT"]
 
-            if rows.empty:
-                st.warning("Aucune ligne DRAFT")
-                st.stop()
-
             for i, _ in rows.iterrows():
 
                 sheets["inventaire"].update(
-                    f"K{i+2}",
+                    f"J{i+2}",
                     [["FINAL"]]
                 )
 
             load_data.clear()
-            st.success("✔ Inventaire verrouillé définitivement")
+            st.success("✔ FINAL OK")
             st.rerun()
