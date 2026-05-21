@@ -42,6 +42,15 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
+# CLEAN FUNCTION
+# ---------------------------------------------------
+
+def clean(v):
+    if pd.isna(v):
+        return ""
+    return str(v)
+
+# ---------------------------------------------------
 # LOAD DATA SAFE
 # ---------------------------------------------------
 
@@ -63,7 +72,6 @@ def load_data():
 
     if len(inv_raw) == 0 or len(inv_raw[0]) == 0:
         inv_df = pd.DataFrame(columns=columns)
-
     else:
         headers = inv_raw[0]
 
@@ -93,7 +101,7 @@ def load_data():
 sku_df, users_df, dist_df, price_df, inv_df = load_data()
 
 # ---------------------------------------------------
-# SESSION
+# SESSION STATE
 # ---------------------------------------------------
 
 if "logged" not in st.session_state:
@@ -131,13 +139,12 @@ if not st.session_state.logged:
             st.error("Login incorrect")
 
 # ---------------------------------------------------
-# APP
+# MAIN APP
 # ---------------------------------------------------
 
 else:
 
     st.title("📦 Inventaire Distributeur")
-
     st.write("👤 Utilisateur :", st.session_state.user)
 
     # ---------------- DISTRIBUTEUR ----------------
@@ -196,7 +203,7 @@ else:
             "CATEGORIE": categorie,
             "ID_Produit": produit,
             "QTY": int(qty),
-            "VALUE": int(qty) * prix
+            "VALUE": float(qty) * float(prix)
         })
 
         st.success("Ajouté au brouillon")
@@ -219,7 +226,7 @@ else:
             num_rows="dynamic"
         )
 
-        # sync QTY seulement
+        # sync QTY
         for i in range(len(edited_df)):
             st.session_state.draft[i]["QTY"] = edited_df.iloc[i]["QTY"]
 
@@ -227,13 +234,13 @@ else:
         st.info("Aucun produit")
 
     # ===================================================
-    # ENVOI FINAL
+    # ENVOI FINAL (FIX JSON ERROR)
     # ===================================================
 
     if st.button("🚀 ENVOI FINAL"):
 
         if not st.session_state.draft:
-            st.warning("Aucune donnée")
+            st.warning("Aucune donnée à envoyer")
         else:
 
             rows = []
@@ -251,17 +258,18 @@ else:
                     except:
                         prix = 0
 
-                value = int(item["QTY"]) * prix
+                qty = int(item["QTY"] or 0)
+                value = float(qty * prix)
 
                 rows.append([
-                    item["DATE"],
-                    item["ID_USER"],
-                    item["USERS"],
-                    item["ID_Dist"],
-                    item["DISTRIBUTEUR"],
-                    item["CATEGORIE"],
-                    item["ID_Produit"],
-                    item["QTY"],
+                    clean(item["DATE"]),
+                    clean(item["ID_USER"]),
+                    clean(item["USERS"]),
+                    clean(item["ID_Dist"]),
+                    clean(item["DISTRIBUTEUR"]),
+                    clean(item["CATEGORIE"]),
+                    clean(item["ID_Produit"]),
+                    qty,
                     value
                 ])
 
@@ -271,7 +279,7 @@ else:
 
             load_data.clear()
 
-            st.success("Inventaire envoyé avec succès")
+            st.success("✅ Inventaire envoyé avec succès")
             st.rerun()
 
     # ===================================================
@@ -289,13 +297,11 @@ else:
     if not historique.empty:
 
         st.dataframe(
-            historique[
-                ["CATEGORIE","ID_Produit","QTY","VALUE"]
-            ],
+            historique[["CATEGORIE","ID_Produit","QTY","VALUE"]],
             use_container_width=True
         )
 
-        total = historique["VALUE"].astype(float).sum()
+        total = pd.to_numeric(historique["VALUE"], errors="coerce").fillna(0).sum()
 
         st.success(f"💰 Total : {total:,.2f}")
 
