@@ -8,9 +8,13 @@ from datetime import datetime
 # CONFIG
 # ---------------------------------------------------
 
-st.set_page_config(page_title="Inventaire Pro", layout="wide")
+st.set_page_config(page_title="Inventaire PRO", layout="wide")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+# ---------------------------------------------------
+# CONNEXION GOOGLE SHEETS
+# ---------------------------------------------------
 
 @st.cache_resource
 def connect_google():
@@ -22,7 +26,9 @@ def connect_google():
 
     client = gspread.authorize(creds)
 
-    file = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc")
+    file = client.open_by_key(
+        "10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc"
+    )
 
     return {
         "sku": file.worksheet("SKU"),
@@ -44,7 +50,7 @@ def clean(v):
     return str(v)
 
 # ---------------------------------------------------
-# LOAD DATA
+# LOAD DATA SAFE
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -55,10 +61,38 @@ def load_data():
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
     price_df = pd.DataFrame(sheets["price"].get_all_records())
 
-    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
+    # ---------------- INVENTAIRE SAFE ----------------
+    inv_raw = sheets["inventaire"].get_all_values()
 
-    if "STATUS" not in inv_df.columns:
-        inv_df["STATUS"] = "DRAFT"
+    columns = [
+        "DATE","ID_USER","USERS","ID_Dist",
+        "DISTRIBUTEUR","CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
+    ]
+
+    if len(inv_raw) == 0 or len(inv_raw[0]) == 0:
+        inv_df = pd.DataFrame(columns=columns)
+    else:
+        headers = inv_raw[0]
+
+        if len(headers) != len(columns):
+            inv_df = pd.DataFrame(columns=columns)
+        else:
+            inv_df = pd.DataFrame(inv_raw[1:], columns=headers)
+
+    inv_df.columns = inv_df.columns.str.strip()
+
+    # ---------------- PRICE CLEAN ----------------
+    if not price_df.empty:
+        price_df["Prix_Distributeur"] = (
+            price_df["Prix_Distributeur"]
+            .astype(str)
+            .str.replace(",", ".")
+        )
+
+        price_df["Prix_Distributeur"] = pd.to_numeric(
+            price_df["Prix_Distributeur"],
+            errors="coerce"
+        ).fillna(0)
 
     return sku_df, users_df, dist_df, price_df, inv_df
 
@@ -81,12 +115,12 @@ if "user" not in st.session_state:
 
 if not st.session_state.logged:
 
-    st.title("🔐 Login")
+    st.title("🔐 Connexion")
 
-    user = st.text_input("User")
-    pwd = st.text_input("Password", type="password")
+    user = st.text_input("Utilisateur")
+    pwd = st.text_input("Mot de passe", type="password")
 
-    if st.button("Login"):
+    if st.button("Connexion"):
 
         check = users_df[
             (users_df["ID_USER"].astype(str) == str(user)) &
@@ -98,7 +132,7 @@ if not st.session_state.logged:
             st.session_state.user = user
             st.rerun()
         else:
-            st.error("Erreur login")
+            st.error("Login incorrect")
 
 # ---------------------------------------------------
 # APP
@@ -107,18 +141,18 @@ if not st.session_state.logged:
 else:
 
     st.title("📦 Inventaire PRO")
-    st.write("Utilisateur :", st.session_state.user)
+    st.write("👤 Utilisateur :", st.session_state.user)
 
     # ---------------------------------------------------
-    # FILTRE HISTORIQUE
+    # FILTRE USER DATA
     # ---------------------------------------------------
 
     user_data = inv_df[
         inv_df["ID_USER"].astype(str) == str(st.session_state.user)
-    ]
+    ].copy()
 
     # ---------------------------------------------------
-    # AJOUT PRODUIT
+    # AJOUT PRODUIT (DRAFT DIRECT)
     # ---------------------------------------------------
 
     st.subheader("➕ Ajouter produit")
@@ -154,7 +188,7 @@ else:
 
         value = int(qty) * prix
 
-        new_row = [
+        sheets["inventaire"].append_row([
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             st.session_state.user,
             st.session_state.user,
@@ -165,25 +199,24 @@ else:
             int(qty),
             value,
             "DRAFT"
-        ]
-
-        sheets["inventaire"].append_row(new_row)
+        ])
 
         load_data.clear()
 
         st.success("Ajouté en DRAFT")
-
         st.rerun()
 
     # ---------------------------------------------------
-    # HISTORIQUE EDITABLE
+    # HISTORIQUE MODIFIABLE (DRAFT ONLY)
     # ---------------------------------------------------
 
     st.subheader("📊 Historique (modifiable avant FINAL)")
 
-    editable = user_data[user_data["STATUS"] == "DRAFT"]
+    editable = user_data[user_data["STATUS"] == "DRAFT"].copy()
 
     if not editable.empty:
+
+        editable = editable.reset_index()
 
         edited = st.data_editor(
             editable,
@@ -193,18 +226,22 @@ else:
 
         if st.button("💾 Sauvegarder modifications"):
 
-            for i, row in edited.iterrows():
+            for _, row in edited.iterrows():
 
-                row_index = i + 2
+                sheet_row = row["index"] + 2
 
                 sheets["inventaire"].update(
-                    f"H{row_index}:I{row_index}",
+                    f"H{sheet_row}:I{sheet_row}",
                     [[row["QTY"], row["VALUE"]]]
                 )
 
             load_data.clear()
 
             st.success("Modifications enregistrées")
+            st.rerun()
+
+    else:
+        st.info("Aucune donnée DRAFT")
 
     # ---------------------------------------------------
     # FINALISATION
@@ -212,17 +249,16 @@ else:
 
     if st.button("🚀 ENVOI FINAL"):
 
-        all_data = inv_df[
-            inv_df["ID_USER"].astype(str) == str(st.session_state.user)
-        ]
+        all_data = user_data[user_data["STATUS"] == "DRAFT"].copy()
+        all_data = all_data.reset_index()
 
-        for i, row in all_data.iterrows():
+        for _, row in all_data.iterrows():
 
-            row_index = i + 2
+            sheet_row = row["index"] + 2
 
             sheets["inventaire"].update(
-                f"J{row_index}",
-                "FINAL"
+                f"J{sheet_row}",
+                [["FINAL"]]
             )
 
         load_data.clear()
@@ -231,7 +267,7 @@ else:
         st.rerun()
 
     # ---------------------------------------------------
-    # HISTORIQUE FINAL
+    # HISTORIQUE COMPLET
     # ---------------------------------------------------
 
     st.markdown("---")
