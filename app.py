@@ -38,7 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE LOAD DATA (ANTI CRASH TOTAL)
+# SAFE LOAD DATA
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -48,26 +48,19 @@ def load_data():
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
 
-    # ---------------------------
-    # INVENTAIRE SAFE LOAD
-    # ---------------------------
-
     raw = sheets["inventaire"].get_all_records()
     inv_df = pd.DataFrame(raw)
 
     required_cols = [
         "DATE","ID_USER","USERS","ID_Dist","DISTRIBUTEUR",
-        "CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
+        "MARQUE","CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
-    # 🔥 SI VIDE
     if inv_df.empty:
         inv_df = pd.DataFrame(columns=required_cols)
 
-    # 🔥 SAFE COLUMNS CLEAN
     inv_df.columns = [str(c).strip() for c in inv_df.columns]
 
-    # 🔥 FORCE COLS
     for c in required_cols:
         if c not in inv_df.columns:
             inv_df[c] = ""
@@ -122,7 +115,7 @@ else:
     st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
-    # AJOUT
+    # AJOUT PRODUIT
     # ===================================================
 
     st.subheader("➕ Ajouter produit")
@@ -133,7 +126,13 @@ else:
         dist_df["Distributeur"] == dist
     ]["ID_Dist"].iloc[0]
 
-    cat = st.selectbox("Catégorie", sku_df["CATEGORIE"].dropna().unique())
+    # 🔥 MARQUE AJOUTÉE (AVANT CATEGORIE)
+    marque = st.selectbox("Marque", sku_df["MARQUE"].dropna().unique())
+
+    cat = st.selectbox(
+        "Catégorie",
+        sku_df[sku_df["MARQUE"] == marque]["CATEGORIE"].dropna().unique()
+    )
 
     produits = sku_df[
         sku_df["CATEGORIE"] == cat
@@ -149,7 +148,7 @@ else:
 
     if st.button("Ajouter"):
 
-        value = qty * 0  # si pas de prix dans cette version
+        value = qty * 0
 
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -157,6 +156,7 @@ else:
             st.session_state.user,
             id_dist,
             dist,
+            marque,   # 🔥 AJOUT MARQUE
             cat,
             prod,
             qty,
@@ -218,7 +218,7 @@ else:
                 value = qty * 0
 
                 sheets["inventaire"].update(
-                    f"H{i+2}:J{i+2}",
+                    f"I{i+2}:K{i+2}",
                     [[qty, value, row["STATUS"]]]
                 )
 
@@ -239,7 +239,7 @@ else:
             for i, _ in rows.iterrows():
 
                 sheets["inventaire"].update(
-                    f"J{i+2}",
+                    f"K{i+2}",
                     [["FINAL"]]
                 )
 
