@@ -226,19 +226,17 @@ else:
         # FINALISATION
         # ---------------------------------------------------
 
-        st.subheader("🚀 ENVOI FINAL")
-if False:
-        if st.button("VALIDER DEFINITIVEMENT"):
-
-            rows = user_data[user_data["STATUS"] == "DRAFT"]
-
-            for i, _ in rows.iterrows():
-
-                sheets["inventaire"].update(
-                    f"J{i+2}",
-                    [["FINAL"]]
-                )
-
-            load_data.clear()
-            st.success("✔ FINAL OK")
-            st.rerun()
+       # 🚀 ENVOI FINAL (désactivé temporairement)
+# st.subheader("🚀 ENVOI FINAL")
+# if st.button("VALIDER DEFINITIVEMENT"):
+#     rows = user_data[user_data["STATUS"] == "DRAFT"]
+#
+#     for i, _ in rows.iterrows():
+#         sheets["inventaire"].update(
+#             f"J{i+2}",
+#             [["FINAL"]]
+#         )
+#
+#     load_data.clear()
+#     st.success("✔ FINAL OK")
+#     st.rerun()
