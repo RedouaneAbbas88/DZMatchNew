@@ -38,7 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE LOAD DATA
+# SAFE LOAD DATA (ANTI CRASH TOTAL)
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -48,18 +48,26 @@ def load_data():
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
 
-    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
+    # ---------------------------
+    # INVENTAIRE SAFE LOAD
+    # ---------------------------
+
+    raw = sheets["inventaire"].get_all_records()
+    inv_df = pd.DataFrame(raw)
 
     required_cols = [
         "DATE","ID_USER","USERS","ID_Dist","DISTRIBUTEUR",
-        "MARQUE","CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
+        "CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
+    # 🔥 SI VIDE
     if inv_df.empty:
         inv_df = pd.DataFrame(columns=required_cols)
 
+    # 🔥 SAFE COLUMNS CLEAN
     inv_df.columns = [str(c).strip() for c in inv_df.columns]
 
+    # 🔥 FORCE COLS
     for c in required_cols:
         if c not in inv_df.columns:
             inv_df[c] = ""
@@ -114,7 +122,7 @@ else:
     st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
-    # AJOUT PRODUIT
+    # AJOUT
     # ===================================================
 
     st.subheader("➕ Ajouter produit")
@@ -125,12 +133,7 @@ else:
         dist_df["Distributeur"] == dist
     ]["ID_Dist"].iloc[0]
 
-    marque = st.selectbox("Marque", sku_df["MARQUE"].dropna().unique())
-
-    cat = st.selectbox(
-        "Catégorie",
-        sku_df[sku_df["MARQUE"] == marque]["CATEGORIE"].dropna().unique()
-    )
+    cat = st.selectbox("Catégorie", sku_df["CATEGORIE"].dropna().unique())
 
     produits = sku_df[
         sku_df["CATEGORIE"] == cat
@@ -141,24 +144,23 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # ADD ROW SAFE (FIX APPLIED HERE)
+    # ADD ROW SAFE
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
 
-        value = qty * 0
+        value = qty * 0  # si pas de prix dans cette version
 
         row = [
-            str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-            str(st.session_state.user),
-            str(st.session_state.user),
-            str(id_dist),
-            str(dist),
-            str(marque),
-            str(cat),
-            str(prod),
-            float(qty),
-            float(value),
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            st.session_state.user,
+            st.session_state.user,
+            id_dist,
+            dist,
+            cat,
+            prod,
+            qty,
+            value,
             "DRAFT"
         ]
 
@@ -182,47 +184,65 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
-    st.dataframe(user_data, use_container_width=True)
+    # ---------------------------------------------------
+    # SAFE STATUS CHECK
+    # ---------------------------------------------------
 
-    edited = st.data_editor(user_data, use_container_width=True)
+    draft_exists = (user_data["STATUS"] == "DRAFT").any()
+    final_only = (user_data["STATUS"] == "FINAL").all()
 
-    # ===================================================
-    # SAVE
-    # ===================================================
-
-    if st.button("💾 Sauvegarder"):
-
-        for i, row in edited.iterrows():
-
-            qty = float(row["QTY"]) if row["QTY"] != "" else 0
-            value = qty * 0
-
-            sheets["inventaire"].update(
-                f"I{i+2}:K{i+2}",
-                [[qty, value, row["STATUS"]]]
-            )
-
-        load_data.clear()
-        st.success("Sauvegardé")
-        st.rerun()
+    is_locked = final_only and not draft_exists
 
     # ===================================================
-    # FINAL
+    # DISPLAY
     # ===================================================
 
-    st.subheader("🚀 ENVOI FINAL")
+    if is_locked:
 
-    if st.button("VALIDER DEFINITIVEMENT"):
+        st.dataframe(user_data, use_container_width=True)
+        st.error("🔒 FINAL - verrouillé")
 
-        rows = user_data[user_data["STATUS"] == "DRAFT"]
+    else:
 
-        for i, _ in rows.iterrows():
+        edited = st.data_editor(user_data, use_container_width=True)
 
-            sheets["inventaire"].update(
-                f"K{i+2}",
-                [["FINAL"]]
-            )
+        if st.button("💾 Sauvegarder"):
 
-        load_data.clear()
-        st.success("✔ FINAL OK")
-        st.rerun()
+            for i, row in edited.iterrows():
+
+                try:
+                    qty = float(row["QTY"]) if row["QTY"] != "" else 0
+                except:
+                    qty = 0
+
+                value = qty * 0
+
+                sheets["inventaire"].update(
+                    f"H{i+2}:J{i+2}",
+                    [[qty, value, row["STATUS"]]]
+                )
+
+            load_data.clear()
+            st.success("Sauvegardé")
+            st.rerun()
+
+        # ---------------------------------------------------
+        # FINALISATION
+        # ---------------------------------------------------
+
+        st.subheader("🚀 ENVOI FINAL")
+
+        if st.button("VALIDER DEFINITIVEMENT"):
+
+            rows = user_data[user_data["STATUS"] == "DRAFT"]
+
+            for i, _ in rows.iterrows():
+
+                sheets["inventaire"].update(
+                    f"J{i+2}",
+                    [["FINAL"]]
+                )
+
+            load_data.clear()
+            st.success("✔ FINAL OK")
+            st.rerun()
