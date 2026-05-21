@@ -13,7 +13,7 @@ st.set_page_config(page_title="Inventaire PRO", layout="wide")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# GOOGLE SHEETS
+# CONNECT SHEETS
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -37,7 +37,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# LOAD DATA SAFE
+# LOAD SAFE
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -46,14 +46,19 @@ def load_data():
     sku_df = pd.DataFrame(sheets["sku"].get_all_records())
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
-    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
 
-    inv_df.columns = [str(c).strip() for c in inv_df.columns]
+    raw = sheets["inventaire"].get_all_records()
+    inv_df = pd.DataFrame(raw)
 
     required = [
         "DATE","ID_USER","USERS","ID_Dist","DISTRIBUTEUR",
         "MARQUE","CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
+
+    if inv_df.empty:
+        inv_df = pd.DataFrame(columns=required)
+
+    inv_df.columns = [str(c).strip() for c in inv_df.columns]
 
     for c in required:
         if c not in inv_df.columns:
@@ -65,7 +70,7 @@ def load_data():
 sku_df, users_df, dist_df, inv_df = load_data()
 
 # ---------------------------------------------------
-# LOGIN
+# SESSION LOGIN
 # ---------------------------------------------------
 
 if "logged" not in st.session_state:
@@ -101,15 +106,15 @@ if not st.session_state.logged:
 
 else:
 
-    st.title("📦 INVENTAIRE PRO")
+    st.title("📦 INVENTAIRE")
 
     st.write("User :", st.session_state.user)
 
     # ===================================================
-    # AJOUT
+    # AJOUT PRODUIT
     # ===================================================
 
-    st.subheader("➕ Ajouter produit")
+    st.subheader("➕ Ajouter")
 
     marque = st.selectbox("Marque", sku_df["MARQUE"].dropna().unique())
 
@@ -154,10 +159,10 @@ else:
         st.rerun()
 
     # ===================================================
-    # TABLE EDITABLE DRAFT
+    # TABLE (SIMPLE AFFICHAGE)
     # ===================================================
 
-    st.subheader("📊 Inventaire (modifiable)")
+    st.subheader("📊 Inventaire")
 
     user_data = inv_df[
         inv_df["ID_USER"].astype(str) == str(st.session_state.user)
@@ -167,26 +172,24 @@ else:
         st.info("Aucune donnée")
         st.stop()
 
-    # ---------------------------------------------------
-    # FILTER DISPLAY
-    # ---------------------------------------------------
-
-    display_cols = ["MARQUE","CATEGORIE","ID_Produit","QTY","STATUS"]
-    st.dataframe(user_data[display_cols], use_container_width=True)
+    st.dataframe(
+        user_data[["MARQUE","CATEGORIE","ID_Produit","QTY","STATUS"]],
+        use_container_width=True
+    )
 
     # ===================================================
-    # EDIT DRAFT
+    # EDIT DRAFT (MODIFICATION DIRECTE)
     # ===================================================
 
     draft_df = user_data[user_data["STATUS"] == "DRAFT"].copy()
 
     if not draft_df.empty:
 
-        st.subheader("✏ Modifier quantités (DRAFT)")
+        st.subheader("✏ Modifier (DRAFT)")
 
         edited = st.data_editor(draft_df, use_container_width=True)
 
-        if st.button("💾 Sauvegarder modifications"):
+        if st.button("💾 Sauvegarder"):
 
             for i, row in edited.iterrows():
 
@@ -196,7 +199,7 @@ else:
                     qty = 0
 
                 sheets["inventaire"].update(
-                    f"H{i+2}",
+                    f"I{i+2}",
                     [[qty]]
                 )
 
@@ -208,9 +211,9 @@ else:
     # FINALISATION
     # ===================================================
 
-    st.subheader("🚀 Finalisation")
+    st.subheader("🚀 FINALISER")
 
-    if st.button("VALIDER DEFINITIVEMENT"):
+    if st.button("ENVOI FINAL"):
 
         for i, _ in draft_df.iterrows():
 
@@ -220,5 +223,5 @@ else:
             )
 
         load_data.clear()
-        st.success("✔ FINAL OK - verrouillé")
+        st.success("✔ FINALISÉ")
         st.rerun()
