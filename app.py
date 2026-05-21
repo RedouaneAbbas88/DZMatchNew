@@ -8,14 +8,7 @@ from datetime import datetime
 # CONFIG
 # ---------------------------------------------------
 
-st.set_page_config(
-    page_title="Inventaire Distributeur",
-    layout="wide"
-)
-
-# ---------------------------------------------------
-# GOOGLE SHEETS
-# ---------------------------------------------------
+st.set_page_config(page_title="Inventaire Pro", layout="wide")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -42,7 +35,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# CLEAN FUNCTION
+# CLEAN
 # ---------------------------------------------------
 
 def clean(v):
@@ -51,7 +44,7 @@ def clean(v):
     return str(v)
 
 # ---------------------------------------------------
-# LOAD DATA SAFE
+# LOAD DATA
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -62,38 +55,10 @@ def load_data():
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
     price_df = pd.DataFrame(sheets["price"].get_all_records())
 
-    # ---------------- INVENTAIRE SAFE ----------------
-    inv_raw = sheets["inventaire"].get_all_values()
+    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
 
-    columns = [
-        "DATE","ID_USER","USERS","ID_Dist",
-        "DISTRIBUTEUR","CATEGORIE","ID_Produit","QTY","VALUE"
-    ]
-
-    if len(inv_raw) == 0 or len(inv_raw[0]) == 0:
-        inv_df = pd.DataFrame(columns=columns)
-    else:
-        headers = inv_raw[0]
-
-        if len(headers) != len(columns):
-            inv_df = pd.DataFrame(columns=columns)
-        else:
-            inv_df = pd.DataFrame(inv_raw[1:], columns=headers)
-
-    inv_df.columns = inv_df.columns.str.strip()
-
-    # ---------------- CLEAN PRICE ----------------
-    if not price_df.empty:
-        price_df["Prix_Distributeur"] = (
-            price_df["Prix_Distributeur"]
-            .astype(str)
-            .str.replace(",", ".")
-        )
-
-        price_df["Prix_Distributeur"] = pd.to_numeric(
-            price_df["Prix_Distributeur"],
-            errors="coerce"
-        ).fillna(0)
+    if "STATUS" not in inv_df.columns:
+        inv_df["STATUS"] = "DRAFT"
 
     return sku_df, users_df, dist_df, price_df, inv_df
 
@@ -101,7 +66,7 @@ def load_data():
 sku_df, users_df, dist_df, price_df, inv_df = load_data()
 
 # ---------------------------------------------------
-# SESSION STATE
+# SESSION
 # ---------------------------------------------------
 
 if "logged" not in st.session_state:
@@ -110,21 +75,18 @@ if "logged" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = ""
 
-if "draft" not in st.session_state:
-    st.session_state.draft = []
-
 # ---------------------------------------------------
 # LOGIN
 # ---------------------------------------------------
 
 if not st.session_state.logged:
 
-    st.title("🔐 Connexion")
+    st.title("🔐 Login")
 
-    user = st.text_input("Utilisateur")
-    pwd = st.text_input("Mot de passe", type="password")
+    user = st.text_input("User")
+    pwd = st.text_input("Password", type="password")
 
-    if st.button("Connexion"):
+    if st.button("Login"):
 
         check = users_df[
             (users_df["ID_USER"].astype(str) == str(user)) &
@@ -136,55 +98,51 @@ if not st.session_state.logged:
             st.session_state.user = user
             st.rerun()
         else:
-            st.error("Login incorrect")
+            st.error("Erreur login")
 
 # ---------------------------------------------------
-# MAIN APP
+# APP
 # ---------------------------------------------------
 
 else:
 
-    st.title("📦 Inventaire Distributeur")
-    st.write("👤 Utilisateur :", st.session_state.user)
+    st.title("📦 Inventaire PRO")
+    st.write("Utilisateur :", st.session_state.user)
 
-    # ---------------- DISTRIBUTEUR ----------------
+    # ---------------------------------------------------
+    # FILTRE HISTORIQUE
+    # ---------------------------------------------------
 
-    dist_name = st.selectbox(
-        "Distributeur",
-        dist_df["Distributeur"].dropna().unique()
-    )
+    user_data = inv_df[
+        inv_df["ID_USER"].astype(str) == str(st.session_state.user)
+    ]
+
+    # ---------------------------------------------------
+    # AJOUT PRODUIT
+    # ---------------------------------------------------
+
+    st.subheader("➕ Ajouter produit")
+
+    dist = st.selectbox("Distributeur", dist_df["Distributeur"].unique())
 
     id_dist = dist_df[
-        dist_df["Distributeur"] == dist_name
+        dist_df["Distributeur"] == dist
     ]["ID_Dist"].iloc[0]
 
-    # ---------------- CATEGORIE ----------------
-
-    categorie = st.selectbox(
-        "Catégorie",
-        sku_df["CATEGORIE"].dropna().unique()
-    )
-
-    # ---------------- PRODUIT ----------------
+    cat = st.selectbox("Catégorie", sku_df["CATEGORIE"].unique())
 
     produits = sku_df[
-        sku_df["CATEGORIE"] == categorie
-    ]["ID"].dropna().unique()
+        sku_df["CATEGORIE"] == cat
+    ]["ID"].unique()
 
-    produit = st.selectbox("Produit", produits)
-
-    # ---------------- QUANTITE ----------------
+    prod = st.selectbox("Produit", produits)
 
     qty = st.number_input("Quantité", min_value=0, step=1)
 
-    # ===================================================
-    # AJOUT BROUILLON
-    # ===================================================
-
-    if st.button("➕ Ajouter au brouillon"):
+    if st.button("Valider quantité"):
 
         prix_row = price_df[
-            price_df["ID"].astype(str) == str(produit)
+            price_df["ID"].astype(str) == str(prod)
         ]
 
         prix = 0
@@ -194,124 +152,89 @@ else:
             except:
                 prix = 0
 
-        st.session_state.draft.append({
-            "DATE": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "ID_USER": st.session_state.user,
-            "USERS": st.session_state.user,
-            "ID_Dist": id_dist,
-            "DISTRIBUTEUR": dist_name,
-            "CATEGORIE": categorie,
-            "ID_Produit": produit,
-            "QTY": int(qty),
-            "VALUE": float(qty) * float(prix)
-        })
+        value = int(qty) * prix
 
-        st.success("Ajouté au brouillon")
+        new_row = [
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            st.session_state.user,
+            st.session_state.user,
+            id_dist,
+            dist,
+            cat,
+            prod,
+            int(qty),
+            value,
+            "DRAFT"
+        ]
 
-    # ===================================================
-    # TABLEAU BROUILLON (VALUE cachée)
-    # ===================================================
+        sheets["inventaire"].append_row(new_row)
 
-    st.subheader("🧾 Brouillon")
+        load_data.clear()
 
-    if st.session_state.draft:
+        st.success("Ajouté en DRAFT")
 
-        df_draft = pd.DataFrame(st.session_state.draft)
+        st.rerun()
 
-        display_df = df_draft.drop(columns=["VALUE"])
+    # ---------------------------------------------------
+    # HISTORIQUE EDITABLE
+    # ---------------------------------------------------
 
-        edited_df = st.data_editor(
-            display_df,
+    st.subheader("📊 Historique (modifiable avant FINAL)")
+
+    editable = user_data[user_data["STATUS"] == "DRAFT"]
+
+    if not editable.empty:
+
+        edited = st.data_editor(
+            editable,
             use_container_width=True,
             num_rows="dynamic"
         )
 
-        # sync QTY
-        for i in range(len(edited_df)):
-            st.session_state.draft[i]["QTY"] = edited_df.iloc[i]["QTY"]
+        if st.button("💾 Sauvegarder modifications"):
 
-    else:
-        st.info("Aucun produit")
+            for i, row in edited.iterrows():
 
-    # ===================================================
-    # ENVOI FINAL (FIX JSON ERROR)
-    # ===================================================
+                row_index = i + 2
 
-    if st.button("🚀 ENVOI FINAL"):
-
-        if not st.session_state.draft:
-            st.warning("Aucune donnée à envoyer")
-        else:
-
-            rows = []
-
-            for item in st.session_state.draft:
-
-                prix_row = price_df[
-                    price_df["ID"].astype(str) == str(item["ID_Produit"])
-                ]
-
-                prix = 0
-                if not prix_row.empty:
-                    try:
-                        prix = float(prix_row.iloc[0]["Prix_Distributeur"])
-                    except:
-                        prix = 0
-
-                qty = int(item["QTY"] or 0)
-                value = float(qty * prix)
-
-                rows.append([
-                    clean(item["DATE"]),
-                    clean(item["ID_USER"]),
-                    clean(item["USERS"]),
-                    clean(item["ID_Dist"]),
-                    clean(item["DISTRIBUTEUR"]),
-                    clean(item["CATEGORIE"]),
-                    clean(item["ID_Produit"]),
-                    qty,
-                    value
-                ])
-
-            sheets["inventaire"].append_rows(rows)
-
-            st.session_state.draft = []
+                sheets["inventaire"].update(
+                    f"H{row_index}:I{row_index}",
+                    [[row["QTY"], row["VALUE"]]]
+                )
 
             load_data.clear()
 
-            st.success("✅ Inventaire envoyé avec succès")
-            st.rerun()
+            st.success("Modifications enregistrées")
 
-    # ===================================================
-    # HISTORIQUE
-    # ===================================================
+    # ---------------------------------------------------
+    # FINALISATION
+    # ---------------------------------------------------
+
+    if st.button("🚀 ENVOI FINAL"):
+
+        all_data = inv_df[
+            inv_df["ID_USER"].astype(str) == str(st.session_state.user)
+        ]
+
+        for i, row in all_data.iterrows():
+
+            row_index = i + 2
+
+            sheets["inventaire"].update(
+                f"J{row_index}",
+                "FINAL"
+            )
+
+        load_data.clear()
+
+        st.success("Inventaire verrouillé")
+        st.rerun()
+
+    # ---------------------------------------------------
+    # HISTORIQUE FINAL
+    # ---------------------------------------------------
 
     st.markdown("---")
-    st.subheader("📊 Historique")
+    st.subheader("📋 Historique complet")
 
-    historique = inv_df[
-        (inv_df["ID_USER"].astype(str) == str(st.session_state.user)) &
-        (inv_df["ID_Dist"].astype(str) == str(id_dist))
-    ]
-
-    if not historique.empty:
-
-        st.dataframe(
-            historique[["CATEGORIE","ID_Produit","QTY","VALUE"]],
-            use_container_width=True
-        )
-
-        total = pd.to_numeric(historique["VALUE"], errors="coerce").fillna(0).sum()
-
-        st.success(f"💰 Total : {total:,.2f}")
-
-    else:
-        st.info("Aucun inventaire")
-
-    # ===================================================
-    # RESET
-    # ===================================================
-
-    if st.button("🔄 Reset brouillon"):
-        st.session_state.draft = []
-        st.rerun()
+    st.dataframe(user_data, use_container_width=True)
