@@ -48,10 +48,6 @@ def load_data():
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
 
-    # ---------------------------
-    # INVENTAIRE SAFE LOAD
-    # ---------------------------
-
     raw = sheets["inventaire"].get_all_records()
     inv_df = pd.DataFrame(raw)
 
@@ -60,14 +56,11 @@ def load_data():
         "CATEGORIE","ID_Produit","QTY","VALUE","STATUS"
     ]
 
-    # 🔥 SI VIDE
     if inv_df.empty:
         inv_df = pd.DataFrame(columns=required_cols)
 
-    # 🔥 SAFE COLUMNS CLEAN
     inv_df.columns = [str(c).strip() for c in inv_df.columns]
 
-    # 🔥 FORCE COLS
     for c in required_cols:
         if c not in inv_df.columns:
             inv_df[c] = ""
@@ -144,23 +137,28 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # ADD ROW SAFE
+    # ADD ROW SAFE (FIX ICI)
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
 
-        value = qty * 0  # si pas de prix dans cette version
+        try:
+            qty_val = float(qty)
+        except:
+            qty_val = 0
+
+        value = qty_val * 0
 
         row = [
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            st.session_state.user,
-            st.session_state.user,
-            id_dist,
-            dist,
-            cat,
-            prod,
-            qty,
-            value,
+            str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            str(st.session_state.user),
+            str(st.session_state.user),
+            str(id_dist),
+            str(dist),
+            str(cat),
+            str(prod),
+            float(qty_val),
+            float(value),
             "DRAFT"
         ]
 
@@ -183,10 +181,6 @@ else:
     if user_data.empty:
         st.info("Aucune donnée")
         st.stop()
-
-    # ---------------------------------------------------
-    # SAFE STATUS CHECK
-    # ---------------------------------------------------
 
     draft_exists = (user_data["STATUS"] == "DRAFT").any()
     final_only = (user_data["STATUS"] == "FINAL").all()
@@ -211,15 +205,15 @@ else:
             for i, row in edited.iterrows():
 
                 try:
-                    qty = float(row["QTY"]) if row["QTY"] != "" else 0
+                    qty_val = float(row["QTY"])
                 except:
-                    qty = 0
+                    qty_val = 0
 
-                value = qty * 0
+                value = qty_val * 0
 
                 sheets["inventaire"].update(
                     f"H{i+2}:J{i+2}",
-                    [[qty, value, row["STATUS"]]]
+                    [[qty_val, value, row["STATUS"]]]
                 )
 
             load_data.clear()
