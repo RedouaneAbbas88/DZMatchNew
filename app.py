@@ -8,7 +8,7 @@ from datetime import datetime
 # CONFIG
 # ---------------------------------------------------
 
-st.set_page_config(page_title="Inventaire PRO", layout="wide")
+st.set_page_config(page_title="Inventaire Simple PRO", layout="wide")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -32,14 +32,13 @@ def connect_google():
         "users": file.worksheet("USERS"),
         "dist": file.worksheet("Distributeur"),
         "price": file.worksheet("Price"),
-        "inventaire": file.worksheet("Inventaire"),
-        "inventaire_final": file.worksheet("Inventaire_Final")
+        "inventaire": file.worksheet("Inventaire")
     }
 
 sheets = connect_google()
 
 # ---------------------------------------------------
-# SAFE PRICE
+# PRICE SAFE
 # ---------------------------------------------------
 
 def get_price(prod_id, price_df):
@@ -65,14 +64,15 @@ def load_data():
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
     price_df = pd.DataFrame(sheets["price"].get_all_records())
-
     inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
-    final_df = pd.DataFrame(sheets["inventaire_final"].get_all_records())
 
-    return sku_df, users_df, dist_df, price_df, inv_df, final_df
+    if "STATUS" not in inv_df.columns:
+        inv_df["STATUS"] = "DRAFT"
+
+    return sku_df, users_df, dist_df, price_df, inv_df
 
 
-sku_df, users_df, dist_df, price_df, inv_df, final_df = load_data()
+sku_df, users_df, dist_df, price_df, inv_df = load_data()
 
 # ---------------------------------------------------
 # SESSION
@@ -92,10 +92,10 @@ if not st.session_state.logged:
 
     st.title("🔐 Connexion")
 
-    user = st.text_input("Utilisateur")
-    pwd = st.text_input("Mot de passe", type="password")
+    user = st.text_input("User")
+    pwd = st.text_input("Password", type="password")
 
-    if st.button("Connexion"):
+    if st.button("Login"):
 
         check = users_df[
             (users_df["ID_USER"].astype(str) == str(user)) &
@@ -115,14 +115,14 @@ if not st.session_state.logged:
 
 else:
 
-    st.title("📦 Inventaire PRO")
+    st.title("📦 Inventaire Simple PRO")
     st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
-    # 1. SAISIE INVENTAIRE (DRAFT)
+    # 1. AJOUT
     # ===================================================
 
-    st.subheader("➕ Saisie inventaire")
+    st.subheader("➕ Ajouter produit")
 
     dist = st.selectbox("Distributeur", dist_df["Distributeur"].dropna().unique())
 
@@ -142,8 +142,8 @@ else:
 
     if st.button("Ajouter"):
 
-        prix = get_price(prod, price_df)
-        value = qty * prix
+        price = get_price(prod, price_df)
+        value = qty * price
 
         sheets["inventaire"].append_row([
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -154,6 +154,7 @@ else:
             cat,
             prod,
             qty,
+            price,
             value,
             "DRAFT"
         ])
@@ -163,96 +164,60 @@ else:
         st.rerun()
 
     # ===================================================
-    # 2. HISTORIQUE INVENTAIRE (EDITABLE)
+    # 2. TABLE (EDITABLE SI DRAFT)
     # ===================================================
 
-    st.subheader("📊 Inventaire (modifiable)")
+    st.subheader("📊 Inventaire")
 
     user_data = inv_df[
         inv_df["ID_USER"].astype(str) == str(st.session_state.user)
     ]
 
-    edited = st.data_editor(
-        user_data,
-        use_container_width=True
-    )
+    is_final = (user_data["STATUS"] == "FINAL").any()
 
-    if st.button("💾 Sauvegarder modifications"):
+    if is_final:
+        st.dataframe(user_data, use_container_width=True)
+        st.error("🔒 Inventaire verrouillé (FINAL)")
+    else:
 
-        for i, row in edited.iterrows():
+        edited = st.data_editor(user_data, use_container_width=True)
 
-            sheets["inventaire"].update(
-                f"H{i+2}:I{i+2}",
-                [[row["QTY"], row["VALUE"]]]
-            )
+        if st.button("💾 Sauvegarder modifications"):
 
-        load_data.clear()
-        st.success("Modifications enregistrées")
-        st.rerun()
+            for i, row in edited.iterrows():
 
-    # ===================================================
-    # 3. SAUVEGARDE VERS INVENTAIRE FINAL
-    # ===================================================
+                price = float(row["PRICE"])
+                qty = float(row["QTY"])
+                value = price * qty
 
-    st.subheader("📦 Sauvegarder vers Inventaire Final")
+                sheets["inventaire"].update(
+                    f"H{i+2}:J{i+2}",
+                    [[qty, price, value]]
+                )
 
-    if st.button("SAUVEGARDER FINAL"):
-
-        draft_rows = user_data[user_data["STATUS"] == "DRAFT"]
-
-        rows_to_push = []
-
-        for _, r in draft_rows.iterrows():
-
-            rows_to_push.append([
-                r["DATE"],
-                r["ID_USER"],
-                r["USERS"],
-                r["ID_Dist"],
-                r["DISTRIBUTEUR"],
-                r["CATEGORIE"],
-                r["ID_Produit"],
-                r["QTY"],
-                r["VALUE"],
-                "READY"
-            ])
-
-        sheets["inventaire_final"].append_rows(rows_to_push)
-
-        load_data.clear()
-        st.success("Transféré vers Inventaire_Final")
-        st.rerun()
+            load_data.clear()
+            st.success("Modifications enregistrées")
+            st.rerun()
 
     # ===================================================
-    # 4. VALIDATION DEFINITIVE
+    # 3. FINALISATION
     # ===================================================
 
-    st.subheader("🚀 Validation définitive")
+    st.subheader("🚀 Envoi final")
 
-    final_user_data = final_df[
-        final_df["ID_USER"].astype(str) == str(st.session_state.user)
-    ]
-
-    if not final_user_data.empty:
+    if not is_final:
 
         if st.button("VALIDER DEFINITIVEMENT"):
 
-            for i, _ in final_user_data.iterrows():
+            rows = user_data[user_data["STATUS"] == "DRAFT"]
 
-                sheets["inventaire_final"].update(
-                    f"J{i+2}",
+            for i, _ in rows.iterrows():
+
+                sheets["inventaire"].update(
+                    f"K{i+2}",
                     [["FINAL"]]
                 )
 
             load_data.clear()
-            st.success("✔ FINAL verrouillé")
+            st.success("✔ Inventaire verrouillé définitivement")
             st.rerun()
-
-    # ===================================================
-    # 5. AFFICHAGE FINAL
-    # ===================================================
-
-    st.markdown("---")
-    st.subheader("📋 Inventaire Final")
-
-    st.dataframe(final_df, use_container_width=True)
