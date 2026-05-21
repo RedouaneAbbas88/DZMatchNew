@@ -8,12 +8,12 @@ from datetime import datetime
 # CONFIG
 # ---------------------------------------------------
 
-st.set_page_config(page_title="Inventaire Simple PRO", layout="wide")
+st.set_page_config(page_title="Inventaire PRO SIMPLE", layout="wide")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# CONNECT GOOGLE SHEETS
+# GOOGLE SHEETS
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -115,7 +115,7 @@ if not st.session_state.logged:
 
 else:
 
-    st.title("📦 Inventaire Simple PRO")
+    st.title("📦 Inventaire PRO SIMPLE")
     st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
@@ -164,20 +164,33 @@ else:
         st.rerun()
 
     # ===================================================
-    # 2. TABLE (EDITABLE SI DRAFT)
+    # 2. TABLE
     # ===================================================
 
     st.subheader("📊 Inventaire")
 
     user_data = inv_df[
         inv_df["ID_USER"].astype(str) == str(st.session_state.user)
-    ]
+    ].copy()
 
-    is_final = (user_data["STATUS"] == "FINAL").any()
+    # ---------------------------------------------------
+    # 🔥 CORRECTION LOGIQUE VERROUILLAGE
+    # ---------------------------------------------------
 
-    if is_final:
+    draft_exists = (user_data["STATUS"] == "DRAFT").any()
+    final_only = (user_data["STATUS"] == "FINAL").all()
+
+    is_locked = final_only and not draft_exists
+
+    # ===================================================
+    # 3. AFFICHAGE
+    # ===================================================
+
+    if is_locked:
+
         st.dataframe(user_data, use_container_width=True)
-        st.error("🔒 Inventaire verrouillé (FINAL)")
+        st.error("🔒 Inventaire définitivement verrouillé")
+
     else:
 
         edited = st.data_editor(user_data, use_container_width=True)
@@ -199,13 +212,11 @@ else:
             st.success("Modifications enregistrées")
             st.rerun()
 
-    # ===================================================
-    # 3. FINALISATION
-    # ===================================================
+        # ===================================================
+        # 4. FINALISATION
+        # ===================================================
 
-    st.subheader("🚀 Envoi final")
-
-    if not is_final:
+        st.subheader("🚀 Envoi final")
 
         if st.button("VALIDER DEFINITIVEMENT"):
 
@@ -219,5 +230,5 @@ else:
                 )
 
             load_data.clear()
-            st.success("✔ Inventaire verrouillé définitivement")
+            st.success("✔ Inventaire verrouillé")
             st.rerun()
