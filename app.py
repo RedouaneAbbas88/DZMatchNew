@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import pandas as pd
 import gspread
@@ -12,6 +13,27 @@ st.set_page_config(
     page_title="Inventaire Distributeur",
     layout="wide"
 )
+
+# ---------------------------------------------------
+# STYLE
+# ---------------------------------------------------
+
+st.markdown("""
+<style>
+
+.main {
+    padding-top: 20px;
+}
+
+.stButton button {
+    width: 100%;
+    height: 45px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------------------------------------------
 # GOOGLE SHEETS CONNECTION
@@ -29,7 +51,9 @@ def connect_google():
 
     client = gspread.authorize(creds)
 
-    file = client.open_by_key("10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc")
+    file = client.open_by_key(
+        "10a1HUd0aGXJSWzVYjLtm3n5j9FjvvH5gz7Vot5wlLmc"
+    )
 
     return {
         "sku": file.worksheet("SKU"),
@@ -48,11 +72,42 @@ sheets = connect_google()
 @st.cache_data(ttl=60)
 def load_data():
 
-    sku_df = pd.DataFrame(sheets["sku"].get_all_records())
-    users_df = pd.DataFrame(sheets["users"].get_all_records())
-    dist_df = pd.DataFrame(sheets["dist"].get_all_records())
-    price_df = pd.DataFrame(sheets["price"].get_all_records())
-    inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
+    sku_df = pd.DataFrame(
+        sheets["sku"].get_all_records()
+    )
+
+    users_df = pd.DataFrame(
+        sheets["users"].get_all_records()
+    )
+
+    dist_df = pd.DataFrame(
+        sheets["dist"].get_all_records()
+    )
+
+    price_df = pd.DataFrame(
+        sheets["price"].get_all_records()
+    )
+
+    inv_df = pd.DataFrame(
+        sheets["inventaire"].get_all_records()
+    )
+
+    # -------------------------------------------
+    # CLEAN PRICE
+    # -------------------------------------------
+
+    if not price_df.empty:
+
+        price_df["Prix_Distributeur"] = (
+            price_df["Prix_Distributeur"]
+            .astype(str)
+            .str.replace(",", ".")
+        )
+
+        price_df["Prix_Distributeur"] = pd.to_numeric(
+            price_df["Prix_Distributeur"],
+            errors="coerce"
+        ).fillna(0)
 
     return sku_df, users_df, dist_df, price_df, inv_df
 
@@ -65,8 +120,11 @@ sku_df, users_df, dist_df, price_df, inv_df = load_data()
 if "logged" not in st.session_state:
     st.session_state.logged = False
 
+if "user" not in st.session_state:
+    st.session_state.user = ""
+
 # ---------------------------------------------------
-# LOGIN
+# LOGIN PAGE
 # ---------------------------------------------------
 
 if not st.session_state.logged:
@@ -79,8 +137,8 @@ if not st.session_state.logged:
     if st.button("Connexion"):
 
         check = users_df[
-            (users_df["ID_USER"] == user) &
-            (users_df["PWD"] == pwd)
+            (users_df["ID_USER"].astype(str) == str(user)) &
+            (users_df["PWD"].astype(str) == str(pwd))
         ]
 
         if not check.empty:
@@ -89,28 +147,50 @@ if not st.session_state.logged:
             st.session_state.user = user
 
             st.success("Connexion réussie")
+
             st.rerun()
 
         else:
+
             st.error("Utilisateur ou mot de passe incorrect")
 
 # ---------------------------------------------------
-# MAIN APP
+# MAIN APPLICATION
 # ---------------------------------------------------
 
 else:
 
-    st.title("📦 Inventaire Distributeur")
+    # ---------------------------------------------------
+    # HEADER
+    # ---------------------------------------------------
 
-    st.write(f"Connecté : {st.session_state.user}")
+    col1, col2 = st.columns([8, 2])
 
-    # -------------------------------------------
+    with col1:
+        st.title("📦 Inventaire Distributeur")
+
+    with col2:
+
+        if st.button("Déconnexion"):
+
+            st.session_state.logged = False
+            st.session_state.user = ""
+
+            st.rerun()
+
+    st.write(f"👤 Connecté : {st.session_state.user}")
+
+    st.markdown("---")
+
+    # ---------------------------------------------------
     # DISTRIBUTEUR
-    # -------------------------------------------
+    # ---------------------------------------------------
+
+    distributeurs = dist_df["Distributeur"].dropna().unique()
 
     dist_name = st.selectbox(
-        "Sélectionner distributeur",
-        dist_df["Distributeur"].unique()
+        "Sélectionner un distributeur",
+        distributeurs
     )
 
     dist_row = dist_df[
@@ -119,33 +199,35 @@ else:
 
     id_dist = dist_row["ID_Dist"]
 
-    st.markdown("---")
-
-    # -------------------------------------------
+    # ---------------------------------------------------
     # CATEGORIE
-    # -------------------------------------------
+    # ---------------------------------------------------
+
+    categories = sku_df["CATEGORIE"].dropna().unique()
 
     categorie = st.selectbox(
         "Catégorie",
-        sku_df["CATEGORIE"].unique()
+        categories
     )
 
-    # -------------------------------------------
-    # PRODUITS FILTRÉS
-    # -------------------------------------------
+    # ---------------------------------------------------
+    # PRODUITS
+    # ---------------------------------------------------
 
-    produits = sku_df[
+    produits_df = sku_df[
         sku_df["CATEGORIE"] == categorie
     ]
 
+    produits = produits_df["ID"].dropna().unique()
+
     produit = st.selectbox(
         "Produit",
-        produits["ID"].unique()
+        produits
     )
 
-    # -------------------------------------------
+    # ---------------------------------------------------
     # QUANTITE
-    # -------------------------------------------
+    # ---------------------------------------------------
 
     qty = st.number_input(
         "Quantité",
@@ -153,37 +235,56 @@ else:
         step=1
     )
 
-    # -------------------------------------------
+    # ---------------------------------------------------
     # PRIX
-    # -------------------------------------------
+    # ---------------------------------------------------
 
     prix_row = price_df[
-        price_df["ID"] == produit
+        price_df["ID"].astype(str) == str(produit)
     ]
 
     prix = 0
 
     if not prix_row.empty:
-        prix = float(prix_row.iloc[0]["Prix_Distributeur"])
+
+        prix_value = prix_row.iloc[0]["Prix_Distributeur"]
+
+        try:
+            prix = float(prix_value)
+
+        except:
+            prix = 0
 
     value = qty * prix
 
-    # -------------------------------------------
+    # ---------------------------------------------------
+    # INFO
+    # ---------------------------------------------------
+
+    st.info(f"💰 Valeur calculée : {value:,.2f} DZD")
+
+    # ---------------------------------------------------
     # SAVE
-    # -------------------------------------------
+    # ---------------------------------------------------
 
     if st.button("✅ Valider"):
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # vérifier si déjà existe
+        # -------------------------------------------
+        # CHECK EXISTING PRODUCT
+        # -------------------------------------------
+
         existing = inv_df[
-            (inv_df["ID_USER"] == st.session_state.user) &
-            (inv_df["ID_Dist"] == id_dist) &
-            (inv_df["ID_Produit"] == produit)
+            (inv_df["ID_USER"].astype(str) == str(st.session_state.user)) &
+            (inv_df["ID_Dist"].astype(str) == str(id_dist)) &
+            (inv_df["ID_Produit"].astype(str) == str(produit))
         ]
 
-        # UPDATE
+        # -------------------------------------------
+        # UPDATE EXISTING
+        # -------------------------------------------
+
         if not existing.empty:
 
             row_index = existing.index[0] + 2
@@ -193,9 +294,12 @@ else:
                 [[qty, value]]
             )
 
-            st.success("Quantité modifiée")
+            st.success("✅ Quantité modifiée")
 
-        # INSERT
+        # -------------------------------------------
+        # INSERT NEW
+        # -------------------------------------------
+
         else:
 
             new_row = [
@@ -212,36 +316,64 @@ else:
 
             sheets["inventaire"].append_row(new_row)
 
-            st.success("Inventaire enregistré")
+            st.success("✅ Produit ajouté")
 
         load_data.clear()
-        st.rerun()
 
-    st.markdown("---")
+        st.rerun()
 
     # ---------------------------------------------------
     # HISTORIQUE
     # ---------------------------------------------------
 
-    st.subheader("📋 Produits déjà saisis")
+    st.markdown("---")
+
+    st.subheader("📋 Inventaire déjà saisi")
 
     historique = inv_df[
-        (inv_df["ID_USER"] == st.session_state.user) &
-        (inv_df["ID_Dist"] == id_dist)
+        (inv_df["ID_USER"].astype(str) == str(st.session_state.user)) &
+        (inv_df["ID_Dist"].astype(str) == str(id_dist))
     ]
 
     if not historique.empty:
 
+        historique = historique[
+            [
+                "CATEGORIE",
+                "ID_Produit",
+                "QTY"
+            ]
+        ]
+
         st.dataframe(
-            historique[
-                [
-                    "CATEGORIE",
-                    "ID_Produit",
-                    "QTY"
-                ]
-            ],
+            historique,
             use_container_width=True
         )
 
+        # -------------------------------------------
+        # TOTAL VALUE
+        # -------------------------------------------
+
+        total_value = inv_df[
+            (inv_df["ID_USER"].astype(str) == str(st.session_state.user)) &
+            (inv_df["ID_Dist"].astype(str) == str(id_dist))
+        ]["VALUE"].sum()
+
+        st.success(
+            f"💵 Valeur totale stock : {total_value:,.2f} DZD"
+        )
+
     else:
-        st.info("Aucune donnée")
+
+        st.warning("Aucune donnée enregistrée")
+
+    # ---------------------------------------------------
+    # REFRESH BUTTON
+    # ---------------------------------------------------
+
+    if st.button("🔄 Actualiser"):
+
+        load_data.clear()
+
+        st.rerun()
+```
