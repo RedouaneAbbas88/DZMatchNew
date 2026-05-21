@@ -8,12 +8,12 @@ from datetime import datetime
 # CONFIG
 # ---------------------------------------------------
 
-st.set_page_config(page_title="Inventaire PRO SIMPLE", layout="wide")
+st.set_page_config(page_title="Inventaire ROBUSTE", layout="wide")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # ---------------------------------------------------
-# GOOGLE SHEETS
+# GOOGLE SHEETS CONNECTION
 # ---------------------------------------------------
 
 @st.cache_resource
@@ -38,7 +38,7 @@ def connect_google():
 sheets = connect_google()
 
 # ---------------------------------------------------
-# PRICE SAFE
+# SAFE PRICE
 # ---------------------------------------------------
 
 def get_price(prod_id, price_df):
@@ -54,7 +54,7 @@ def get_price(prod_id, price_df):
         return 0
 
 # ---------------------------------------------------
-# LOAD DATA
+# SAFE LOAD DATA (ANTI CRASH TOTAL)
 # ---------------------------------------------------
 
 @st.cache_data(ttl=60)
@@ -64,10 +64,28 @@ def load_data():
     users_df = pd.DataFrame(sheets["users"].get_all_records())
     dist_df = pd.DataFrame(sheets["dist"].get_all_records())
     price_df = pd.DataFrame(sheets["price"].get_all_records())
+
     inv_df = pd.DataFrame(sheets["inventaire"].get_all_records())
 
-    if "STATUS" not in inv_df.columns:
-        inv_df["STATUS"] = "DRAFT"
+    # ---------------------------------------------------
+    # CLEAN HEADERS
+    # ---------------------------------------------------
+
+    inv_df.columns = [c.strip() for c in inv_df.columns]
+
+    # ---------------------------------------------------
+    # FORCE REQUIRED COLUMNS (ANTI ERROR)
+    # ---------------------------------------------------
+
+    required_cols = [
+        "DATE", "ID_USER", "USERS", "ID_Dist",
+        "DISTRIBUTEUR", "CATEGORIE", "ID_Produit",
+        "QTY", "PRICE", "VALUE", "STATUS"
+    ]
+
+    for col in required_cols:
+        if col not in inv_df.columns:
+            inv_df[col] = ""
 
     return sku_df, users_df, dist_df, price_df, inv_df
 
@@ -115,7 +133,7 @@ if not st.session_state.logged:
 
 else:
 
-    st.title("📦 Inventaire PRO SIMPLE")
+    st.title("📦 INVENTAIRE ROBUSTE")
     st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
@@ -164,7 +182,7 @@ else:
         st.rerun()
 
     # ===================================================
-    # 2. TABLE
+    # 2. TABLE SAFE (PLUS AUCUN CRASH)
     # ===================================================
 
     st.subheader("📊 Inventaire")
@@ -174,12 +192,15 @@ else:
     ].copy()
 
     # ---------------------------------------------------
-    # 🔥 CORRECTION LOGIQUE VERROUILLAGE
+    # SAFE CHECK FINAL
     # ---------------------------------------------------
+
+    if user_data.empty:
+        st.info("Aucune donnée pour cet utilisateur")
+        st.stop()
 
     draft_exists = (user_data["STATUS"] == "DRAFT").any()
     final_only = (user_data["STATUS"] == "FINAL").all()
-
     is_locked = final_only and not draft_exists
 
     # ===================================================
@@ -189,7 +210,7 @@ else:
     if is_locked:
 
         st.dataframe(user_data, use_container_width=True)
-        st.error("🔒 Inventaire définitivement verrouillé")
+        st.error("🔒 Inventaire verrouillé (FINAL)")
 
     else:
 
@@ -199,9 +220,9 @@ else:
 
             for i, row in edited.iterrows():
 
-                price = float(row["PRICE"])
                 qty = float(row["QTY"])
-                value = price * qty
+                price = float(row["PRICE"])
+                value = qty * price
 
                 sheets["inventaire"].update(
                     f"H{i+2}:J{i+2}",
@@ -209,7 +230,7 @@ else:
                 )
 
             load_data.clear()
-            st.success("Modifications enregistrées")
+            st.success("Modifications sauvegardées")
             st.rerun()
 
         # ===================================================
@@ -222,6 +243,10 @@ else:
 
             rows = user_data[user_data["STATUS"] == "DRAFT"]
 
+            if rows.empty:
+                st.warning("Aucune ligne DRAFT à valider")
+                st.stop()
+
             for i, _ in rows.iterrows():
 
                 sheets["inventaire"].update(
@@ -230,5 +255,5 @@ else:
                 )
 
             load_data.clear()
-            st.success("✔ Inventaire verrouillé")
+            st.success("✔ Inventaire verrouillé définitivement")
             st.rerun()
