@@ -114,10 +114,6 @@ else:
     st.title("📦 INVENTAIRE SAFE PRO")
     st.write("Utilisateur :", st.session_state.user)
 
-    # ===================================================
-    # AJOUT PRODUIT
-    # ===================================================
-
     st.subheader("➕ Ajouter produit")
 
     dist = st.selectbox("Distributeur", dist_df["Distributeur"].dropna().unique())
@@ -142,7 +138,7 @@ else:
     qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ---------------------------------------------------
-    # ADD ROW SAFE (FIX ICI)
+    # ADD ROW (FIX JSON ERROR)
     # ---------------------------------------------------
 
     if st.button("Ajouter"):
@@ -163,21 +159,23 @@ else:
             "DRAFT"
         ]
 
-        # 🔥 FIX UNIQUE ICI (ANTI DÉCALAGE)
         next_row = len(sheets["inventaire"].get_all_values()) + 1
+
+        # ✅ FIX IMPORTANT (anti JSON error)
+        clean_row = [str(x) if x is not None else "" for x in row]
 
         sheets["inventaire"].update(
             f"A{next_row}:K{next_row}",
-            [row]
+            [clean_row]
         )
 
         load_data.clear()
         st.success("Ajouté en DRAFT")
         st.rerun()
 
-    # ===================================================
+    # ---------------------------------------------------
     # TABLE
-    # ===================================================
+    # ---------------------------------------------------
 
     st.subheader("📊 Inventaire")
 
