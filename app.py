@@ -178,14 +178,25 @@ else:
 
     st.subheader("➕ Ajouter produit")
 
-    dist = st.selectbox(
-        "Distributeur",
+    # ✅ LISTE DISTRIBUTEURS AVEC OPTION TOUS
+    dist_options = ["Tous"] + list(
         dist_df["Distributeur"].dropna().unique()
     )
 
-    id_dist = dist_df[
-        dist_df["Distributeur"] == dist
-    ]["ID_Dist"].iloc[0]
+    dist = st.selectbox(
+        "Distributeur",
+        dist_options
+    )
+
+    # ✅ ID DISTRIBUTEUR
+    if dist != "Tous":
+
+        id_dist = dist_df[
+            dist_df["Distributeur"] == dist
+        ]["ID_Dist"].iloc[0]
+
+    else:
+        id_dist = ""
 
     marque = st.selectbox(
         "Marque",
@@ -220,47 +231,55 @@ else:
 
     if st.button("Ajouter"):
 
-        try:
+        if dist == "Tous":
 
-            price = float(
-                price_dict.get(str(prod), 0)
+            st.warning(
+                "Veuillez sélectionner un distributeur"
             )
 
-            value = qty * price
+        else:
 
-            row = [
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                st.session_state.user,
-                st.session_state.user,
-                id_dist,
-                dist,
-                marque,
-                cat,
-                prod,
-                qty,
-                value,
-                "DRAFT"
-            ]
+            try:
 
-            clean_row = [
-                str(x) if x is not None else ""
-                for x in row
-            ]
+                price = float(
+                    price_dict.get(str(prod), 0)
+                )
 
-            # ✅ AJOUT SECURISE
-            sheets["inventaire"].append_row(clean_row)
+                value = qty * price
 
-            time.sleep(1)
+                row = [
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    st.session_state.user,
+                    st.session_state.user,
+                    id_dist,
+                    dist,
+                    marque,
+                    cat,
+                    prod,
+                    qty,
+                    value,
+                    "DRAFT"
+                ]
 
-            load_data.clear()
+                clean_row = [
+                    str(x) if x is not None else ""
+                    for x in row
+                ]
 
-            st.success("Ajouté avec succès")
+                # ✅ AJOUT SECURISE
+                sheets["inventaire"].append_row(clean_row)
 
-            st.rerun()
+                time.sleep(1)
 
-        except Exception as e:
+                load_data.clear()
 
-            st.error(f"Erreur ajout : {e}")
+                st.success("Ajouté avec succès")
+
+                st.rerun()
+
+            except Exception as e:
+
+                st.error(f"Erreur ajout : {e}")
 
     # ===================================================
     # TABLEAU INVENTAIRE
@@ -268,10 +287,19 @@ else:
 
     st.subheader("📊 Inventaire")
 
+    # ✅ FILTRE USER
     user_data = inv_df[
         inv_df["ID_USER"].astype(str)
         == str(st.session_state.user)
     ].copy()
+
+    # ✅ FILTRE DISTRIBUTEUR
+    if dist != "Tous":
+
+        user_data = user_data[
+            user_data["DISTRIBUTEUR"].astype(str)
+            == str(dist)
+        ]
 
     if user_data.empty:
 
