@@ -53,24 +53,12 @@ sheets = connect_google()
 @st.cache_data(ttl=60)
 def load_data():
 
-    sku_df = pd.DataFrame(
-        sheets["sku"].get_all_records()
-    )
-
-    users_df = pd.DataFrame(
-        sheets["users"].get_all_records()
-    )
-
-    dist_df = pd.DataFrame(
-        sheets["dist"].get_all_records()
-    )
-
-    price_df = pd.DataFrame(
-        sheets["price"].get_all_records()
-    )
+    sku_df = pd.DataFrame(sheets["sku"].get_all_records())
+    users_df = pd.DataFrame(sheets["users"].get_all_records())
+    dist_df = pd.DataFrame(sheets["dist"].get_all_records())
+    price_df = pd.DataFrame(sheets["price"].get_all_records())
 
     raw = sheets["inventaire"].get_all_records()
-
     inv_df = pd.DataFrame(raw)
 
     required_cols = [
@@ -96,24 +84,37 @@ def load_data():
         if c not in inv_df.columns:
             inv_df[c] = ""
 
-    return (
-        sku_df,
-        users_df,
-        dist_df,
-        price_df,
-        inv_df
-    )
+    return sku_df, users_df, dist_df, price_df, inv_df
+
 
 sku_df, users_df, dist_df, price_df, inv_df = load_data()
 
 # ---------------------------------------------------
-# PRICE DICTIONARY
+# PRICE CLEANING (FIX IMPORTANT)
 # ---------------------------------------------------
+
+def clean_price(x):
+    if pd.isna(x):
+        return 0
+
+    x = str(x)
+
+    # enlever espaces normaux + insécables
+    x = x.replace(" ", "").replace("\u202f", "")
+
+    # remplacer virgule par point
+    x = x.replace(",", ".")
+
+    try:
+        return float(x)
+    except:
+        return 0
+
 
 price_dict = dict(
     zip(
         price_df["ID"].astype(str),
-        price_df["Prix_Distributeur"]
+        price_df["Prix_Distributeur"].apply(clean_price)
     )
 )
 
@@ -136,11 +137,7 @@ if not st.session_state.logged:
     st.title("🔐 LOGIN SAFE")
 
     user = st.text_input("User")
-
-    pwd = st.text_input(
-        "Password",
-        type="password"
-    )
+    pwd = st.text_input("Password", type="password")
 
     if st.button("Login"):
 
@@ -150,12 +147,9 @@ if not st.session_state.logged:
         ]
 
         if not check.empty:
-
             st.session_state.logged = True
             st.session_state.user = user
-
             st.rerun()
-
         else:
             st.error("Login incorrect")
 
@@ -167,10 +161,7 @@ else:
 
     st.title("📦 INVENTAIRE SAFE PRO")
 
-    st.write(
-        "Utilisateur :",
-        st.session_state.user
-    )
+    st.write("Utilisateur :", st.session_state.user)
 
     # ===================================================
     # AJOUT PRODUIT
@@ -178,23 +169,14 @@ else:
 
     st.subheader("➕ Ajouter produit")
 
-    # ✅ LISTE DISTRIBUTEURS AVEC OPTION TOUS
-    dist_options = ["Tous"] + list(
-        dist_df["Distributeur"].dropna().unique()
-    )
+    dist_options = ["Tous"] + list(dist_df["Distributeur"].dropna().unique())
 
-    dist = st.selectbox(
-        "Distributeur",
-        dist_options
-    )
+    dist = st.selectbox("Distributeur", dist_options)
 
-    # ✅ ID DISTRIBUTEUR
     if dist != "Tous":
-
         id_dist = dist_df[
             dist_df["Distributeur"] == dist
         ]["ID_Dist"].iloc[0]
-
     else:
         id_dist = ""
 
@@ -205,46 +187,30 @@ else:
 
     cat = st.selectbox(
         "Catégorie",
-        sku_df[
-            sku_df["MARQUE"] == marque
-        ]["CATEGORIE"].dropna().unique()
+        sku_df[sku_df["MARQUE"] == marque]["CATEGORIE"].dropna().unique()
     )
 
     produits = sku_df[
         sku_df["CATEGORIE"] == cat
     ]["ID"].dropna().unique()
 
-    prod = st.selectbox(
-        "Produit",
-        produits
-    )
+    prod = st.selectbox("Produit", produits)
 
-    qty = st.number_input(
-        "Quantité",
-        min_value=0,
-        step=1
-    )
+    qty = st.number_input("Quantité", min_value=0, step=1)
 
     # ===================================================
-    # AJOUT LIGNE
+    # AJOUT
     # ===================================================
 
     if st.button("Ajouter"):
 
         if dist == "Tous":
-
-            st.warning(
-                "Veuillez sélectionner un distributeur"
-            )
+            st.warning("Veuillez sélectionner un distributeur")
 
         else:
 
             try:
-
-                price = float(
-                    price_dict.get(str(prod), 0)
-                )
-
+                price = float(price_dict.get(str(prod), 0))
                 value = qty * price
 
                 row = [
@@ -261,56 +227,40 @@ else:
                     "DRAFT"
                 ]
 
-                clean_row = [
-                    str(x) if x is not None else ""
-                    for x in row
-                ]
+                clean_row = [str(x) for x in row]
 
-                # ✅ AJOUT SECURISE
                 sheets["inventaire"].append_row(clean_row)
 
                 time.sleep(1)
-
                 load_data.clear()
 
                 st.success("Ajouté avec succès")
-
                 st.rerun()
 
             except Exception as e:
-
                 st.error(f"Erreur ajout : {e}")
 
     # ===================================================
-    # TABLEAU INVENTAIRE
+    # TABLEAU
     # ===================================================
 
     st.subheader("📊 Inventaire")
 
-    # ✅ FILTRE USER
     user_data = inv_df[
-        inv_df["ID_USER"].astype(str)
-        == str(st.session_state.user)
+        inv_df["ID_USER"].astype(str) == str(st.session_state.user)
     ].copy()
 
-    # ✅ FILTRE DISTRIBUTEUR
     if dist != "Tous":
-
         user_data = user_data[
-            user_data["DISTRIBUTEUR"].astype(str)
-            == str(dist)
+            user_data["DISTRIBUTEUR"].astype(str) == str(dist)
         ]
 
     if user_data.empty:
-
         st.info("Aucune donnée")
-
         st.stop()
 
-    # ✅ GARDER INDEX ORIGINAL
     user_data = user_data.reset_index()
 
-    # Colonnes affichées
     display_data = user_data[
         [
             "index",
@@ -331,49 +281,32 @@ else:
     )
 
     # ===================================================
-    # SAUVEGARDE
+    # SAVE
     # ===================================================
 
     if st.button("💾 Sauvegarder"):
 
         try:
-
             for _, row in edited.iterrows():
 
-                # ✅ vraie ligne Google Sheet
                 real_row = int(row["index"]) + 2
 
-                qty = (
-                    float(row["QTY"])
-                    if str(row["QTY"]) != ""
-                    else 0
-                )
-
+                qty = float(row["QTY"]) if str(row["QTY"]) != "" else 0
                 prod_id = str(row["ID_Produit"])
 
-                price = float(
-                    price_dict.get(prod_id, 0)
-                )
-
+                price = float(price_dict.get(prod_id, 0))
                 value = qty * price
 
                 sheets["inventaire"].update(
                     f"I{real_row}:K{real_row}",
-                    [[
-                        qty,
-                        value,
-                        row["STATUS"]
-                    ]]
+                    [[qty, value, row["STATUS"]]]
                 )
 
                 time.sleep(1)
 
             load_data.clear()
-
             st.success("Sauvegarde effectuée")
-
             st.rerun()
 
         except Exception as e:
-
             st.error(f"Erreur sauvegarde : {e}")
